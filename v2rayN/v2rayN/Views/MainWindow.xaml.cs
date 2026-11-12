@@ -151,7 +151,7 @@ public partial class MainWindow
              .DisposeWith(disposables);
         });
 
-        Title = $"{ProSySBrand.ProductName} {Utils.GetVersionInfo()} - {(Utils.IsAdministrator() ? ResUI.RunAsAdmin : ResUI.NotRunAsAdmin)}";
+        Title = Utils.IsAdministrator() ? $"{ProSySBrand.ProductName} · {ResUI.RunAsAdmin}" : ProSySBrand.ProductName;
         if (_config.UiItem.AutoHideStartup)
         {
             WindowState = WindowState.Minimized;

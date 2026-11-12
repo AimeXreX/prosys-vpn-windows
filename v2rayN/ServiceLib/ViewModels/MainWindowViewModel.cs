@@ -274,6 +274,8 @@ public partial class MainWindowViewModel : MyReactiveObject
             .ObserveOn(RxSchedulers.MainThreadScheduler)
             .SubscribeAsync(async _ =>
             {
+                // The free-service sync can finish before Init(); reloading the core earlier crashes on uninitialised managers.
+                await _initCompleted.Task;
                 await RefreshServersDispatcherAsync();
                 await Reload();
             });
@@ -341,6 +343,8 @@ public partial class MainWindowViewModel : MyReactiveObject
 
         //await ConfigHandler.InitBuiltinRouting(_config);
         await ConfigHandler.InitBuiltinDNS(_config);
+        await RepairProSySDnsAsync();
+        await EnsureIranRoutingAsync();
         await ConfigHandler.InitBuiltinFullConfigTemplate(_config);
         await ProfileExManager.Instance.Init();
         await CoreManager.Instance.Init(_config, UpdateHandler);
@@ -353,7 +357,69 @@ public partial class MainWindowViewModel : MyReactiveObject
         }
         await RefreshServersDispatcherAsync();
 
-        await Reload();
+        try
+        {
+            await Reload();
+        }
+        finally
+        {
+            _initCompleted.TrySetResult();
+        }
+    }
+
+    private static readonly TaskCompletionSource _initCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>ProSyS: completes once profiles, managers and the first core load are ready (one main window per process).</summary>
+    public static Task InitCompleted => _initCompleted.Task;
+
+    /// <summary>
+    /// ProSyS 1.0.0 applied the Iran preset's remote DNS templates on first run, which produced an Xray config the
+    /// core refuses to load. Turn those custom DNS items off once so the built-in DNS is used again.
+    /// </summary>
+    /// <summary>
+    /// When the Iran template could not be downloaded, v2rayN fell back to its mainland-China rule sets, which route
+    /// Iranian sites through the tunnel. Move such installs to the (now bundled) Iran rules.
+    /// </summary>
+    private async Task EnsureIranRoutingAsync()
+    {
+        var current = await ConfigHandler.GetDefaultRouting(_config);
+        if (current?.Remarks?.Contains("大陆") != true)
+        {
+            return;
+        }
+        _config.ConstItem.GeoSourceUrl = Global.GeoFilesSources[2];
+        _config.ConstItem.SrsSourceUrl = Global.SingboxRulesetSources[2];
+        _config.ConstItem.RouteRulesTemplateSourceUrl = Global.RoutingRulesSources[2];
+        await ConfigHandler.InitRouting(_config);
+        var iran = (await AppManager.Instance.RoutingItems()).FirstOrDefault(t => t.Remarks?.StartsWith("IR-") == true);
+        if (iran != null)
+        {
+            await ConfigHandler.SetDefaultRouting(_config, iran);
+        }
+        await ConfigHandler.SaveConfig(_config);
+        RxSchedulers.MainThreadScheduler.Schedule(async () => await StatusBarViewModel.RefreshRoutingsMenu());
+    }
+
+    private async Task RepairProSySDnsAsync()
+    {
+        if (_config.UiItem.ProSySDnsRepaired)
+        {
+            return;
+        }
+        foreach (var type in new[] { ECoreType.Xray, ECoreType.sing_box })
+        {
+            var item = await AppManager.Instance.GetDNSItem(type);
+            if (item is { Enabled: true })
+            {
+                item.Enabled = false;
+                await ConfigHandler.SaveDNSItems(_config, item);
+            }
+        }
+        // The home screen's live speed needs the statistics service; 1.0.0 shipped with it off.
+        _config.GuiItem.EnableStatistics = true;
+        _config.GuiItem.DisplayRealTimeSpeed = true;
+        _config.UiItem.ProSySDnsRepaired = true;
+        await ConfigHandler.SaveConfig(_config);
     }
 
     #endregion Init

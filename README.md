@@ -1,80 +1,70 @@
-# v2rayN
+<div dir="rtl">
 
-### A GUI client for Windows, Linux and macOS. Support [Xray](https://github.com/XTLS/Xray-core) and [sing-box](https://github.com/SagerNet/sing-box) and [others](https://github.com/2dust/v2rayN/wiki/List-of-supported-cores)
+# ProSyS VPN برای ویندوز
 
-[![CodeFactor](https://www.codefactor.io/repository/github/2dust/v2rayn/badge)](https://www.codefactor.io/repository/github/2dust/v2rayn)
-[![Release](https://img.shields.io/github/v/release/2dust/v2rayN?logo=github&label=Release)](https://github.com/2dust/v2rayN/releases)
-[![Downloads](https://img.shields.io/github/downloads/2dust/v2rayN/latest/total?logo=github&label=Downloads)](https://github.com/2dust/v2rayN/releases)
-[![Telegram](https://img.shields.io/badge/Telegram-Chat-26A5E4?logo=telegram)](https://t.me/v2rayn)
- 
-[![Windows](https://img.shields.io/badge/Windows-supported-0078D6?logo=windows)](https://github.com/2dust/v2rayN) 
-[![Linux](https://img.shields.io/badge/Linux-supported-FCC624?logo=linux&logoColor=000)](https://github.com/2dust/v2rayN) 
-[![macOS](https://img.shields.io/badge/macOS-supported-000000?logo=apple)](https://github.com/2dust/v2rayN) 
-[![GPG Signed](https://img.shields.io/badge/GPG-signed-4B32C3?logo=gnuprivacyguard)](https://github.com/2dust/v2rayN)
+کلاینت VPN ویندوز ProSyS، هم‌سبک با [اپ اندروید](https://github.com/AimeXreX/prosys-vpn-android) و [سایت ProSyS](https://vpn.prosysvpn.top/). بر پایهٔ [v2rayN](https://github.com/2dust/v2rayN) و هستهٔ [Xray](https://github.com/XTLS/Xray-core) ساخته شده است.
 
+## دانلود
 
----
+آخرین نسخه را از بخش [Releases](https://github.com/AimeXreX/prosys-vpn-windows/releases/latest) بگیرید:
 
-## Download / 下载
+| فایل | توضیح |
+| --- | --- |
+| `ProSySVPN-<نسخه>-windows-x64-setup.exe` | نصب‌کننده (پیشنهادی). بدون نیاز به Administrator نصب می‌شود و میانبر منوی Start می‌سازد. |
+| `ProSySVPN-<نسخه>-windows-x64.zip` | نسخهٔ پرتابل: از حالت فشرده خارج کنید و `ProSySVPN.exe` را اجرا کنید. |
 
-Download the latest release here:
+کنار هر فایل، هش SHA-256 آن (`.sha256`) هم منتشر می‌شود. ویندوز ۱۰ یا ۱۱ لازم است.
 
-在这里下载最新版本：
+اگر ویندوز پیام «Windows protected your PC» نشان داد، روی **More info** و بعد **Run anyway** بزنید (فایل‌ها هنوز امضای دیجیتال تجاری ندارند).
 
-[https://github.com/2dust/v2rayN/releases](https://github.com/2dust/v2rayN/releases)
+## امکانات
 
+- **سرویس رایگان:** هر کامپیوتر روزانه ۵۰۰ مگابایت حجم رایگان دارد که هر شب ساعت ۰۰:۰۰ به وقت تهران تمدید می‌شود.
+- **انتخاب خودکار سریع‌ترین سرور:** همهٔ سرورهای رایگان با real-ping تست می‌شوند و سریع‌ترین انتخاب می‌شود.
+- **یک دکمه برای اتصال:** پراکسی سیستم برای مرورگر و برنامه‌ها، یا **حالت کامل (TUN)** برای بازی‌ها و همهٔ برنامه‌ها.
+- **مسیریابی ایران:** سایت‌های ایرانی مستقیم و بقیه از تونل؛ قوانین ایران داخل برنامه هست و به دسترسی به گیت‌هاب وابسته نیست.
+- **نمایش زنده:** سهمیهٔ باقی‌مانده، سرعت دانلود و آپلود، و پینگ سرور.
+- **حالت پیشرفته:** همهٔ امکانات v2rayN مثل افزودن کانفیگ و subscription شخصی، مسیریابی، DNS و تست سرعت.
+- کنار v2rayN معمولی اجرا می‌شود و تداخل ندارد (پورت محلی `20808`).
 
-> [!TIP]
-> v2rayN is the desktop version. For the mobile version, please visit the v2rayNG \
-> v2rayN 是电脑版，手机版请访问 v2rayNG
->
-> https://github.com/2dust/v2rayNG
+اشتراک نامحدود را از [سایت](https://vpn.prosysvpn.top/) یا [ربات تلگرام](https://t.me/ProSySsellbot) تهیه کنید. اخبار در [کانال تلگرام](https://t.me/Prosys_VPN) منتشر می‌شود.
 
----
+## حریم خصوصی
 
-## Documentation / 使用文档
+- شناسهٔ دستگاه، هش SHA-256 از `MachineGuid` ویندوز است و شناسهٔ خام ارسال نمی‌شود.
+- توکن سرویس رایگان با DPAPI و فقط برای همان کاربر ویندوز در `%LOCALAPPDATA%\ProSySVPN` ذخیره می‌شود.
+- متن کامل: [vpn.prosysvpn.top/privacy](https://vpn.prosysvpn.top/privacy)
 
-Read the Wiki for usage guides and configuration details.
+## ساخت از سورس
 
-请阅读 Wiki 获取使用说明和配置教程。
+نیازها: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)، Git Bash (یا لینوکس/مک) با `curl` و `unzip`، و برای ساخت نصب‌کننده [Inno Setup 6](https://jrsoftware.org/isinfo.php).
 
-[https://github.com/2dust/v2rayN/wiki](https://github.com/2dust/v2rayN/wiki)
+</div>
 
----
-
-## Supported Platforms / 支持平台
-
-| Platform / 平台 | x64 | x86 | arm64 | riscv64 | loong64 | ppc64le |
-| --- | --- | --- | --- | --- | --- | --- |
-| Windows | ✅ | ✅ | ✅ | - | - | - |
-| Linux | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| macOS | ✅ | - | ✅ | - | - | - |
-
-Minimum OS requirements: [Release files introduction](https://github.com/2dust/v2rayN/wiki/Release-files-introduction) / 最低系统要求：[发布文件介绍](https://github.com/2dust/v2rayN/wiki/Release-files-introduction)
-
----
-
-## GPG Verification / GPG 签名校验
-
-Release files are signed with GPG to verify authenticity and integrity, helping prevent mirror, ISP, or CDN hijacking.
-
-发布文件已使用 GPG 签名，可用于校验文件真实性与完整性，预防镜像站、运营商或 CDN 劫持。
-
-### Fingerprint / 公钥指纹
-
-```text
-7694 5E9F 3E9A 168F 8070 F195 805D 661C
-134D FAF6 8903 C199 463C 31E5 AE90 3AE0
+```bash
+git clone https://github.com/AimeXreX/prosys-vpn-windows.git
+cd prosys-vpn-windows
+prosys/package-windows.sh x64 ./dist     # zip + Setup (اگر Inno Setup نصب باشد)
+prosys/package-windows.sh arm64 ./dist
 ```
 
+<div dir="rtl">
+
+با push کردن تگ `v*` به گیت‌هاب، workflow `prosys-windows.yml` نسخه‌های x64 و arm64 (zip و Setup) را می‌سازد و Release منتشر می‌کند. نسخهٔ برنامه در `v2rayN/v2rayN/v2rayN.csproj` (`<Version>`) تنظیم می‌شود.
+
+جزئیات فنی، ساختار کد ProSyS و تغییرات هر نسخه در [README-PROSYS.md](README-PROSYS.md) آمده است.
+
+## مجوز
+
+این پروژه تحت مجوز [GPL-3.0](LICENSE) منتشر می‌شود و انتساب پروژهٔ اصلی حفظ شده است ([README اصلی v2rayN](UPSTREAM_README.md)).
+
+- [v2rayN](https://github.com/2dust/v2rayN) از 2dust (GPL-3.0)
+- [Xray-core](https://github.com/XTLS/Xray-core) (MPL-2.0) و [sing-box](https://github.com/SagerNet/sing-box) (GPL-3.0)
+- قوانین مسیریابی و geo ایران از [Chocolate4U/Iran-v2ray-rules](https://github.com/Chocolate4U/Iran-v2ray-rules)
+- فونت [Vazirmatn](https://github.com/rastikerdar/vazirmatn) (OFL-1.1) و ترجمهٔ فارسی نصب‌کنندهٔ [Inno Setup](https://github.com/jrsoftware/issrc)
+
+</div>
+
 ---
 
-## Community / 社区
-
-Telegram Group / Telegram 群组：
-
-[https://t.me/v2rayN](https://t.me/v2rayN)
-
-Telegram Channel / Telegram 频道：
-
-[https://t.me/github_2dust](https://t.me/github_2dust)
+**English:** ProSyS VPN for Windows is a branded [v2rayN](https://github.com/2dust/v2rayN) fork with a one-click home screen, a managed free tier (500 MB per PC per day) and automatic fastest-server selection. Download the Setup or the portable zip from [Releases](https://github.com/AimeXreX/prosys-vpn-windows/releases/latest). GPL-3.0.

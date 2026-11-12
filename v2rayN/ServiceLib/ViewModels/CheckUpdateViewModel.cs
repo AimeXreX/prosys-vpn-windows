@@ -64,7 +64,7 @@ public partial class CheckUpdateViewModel : MyReactiveObject
 
     private CheckUpdateModel GetCheckUpdateModel(ECoreType coreType)
     {
-        if (coreType == _v2rayN && Utils.IsPackagedInstall())
+        if (coreType == _v2rayN && !CoreInfoManager.Instance.IsCheckUpdateSupported(_v2rayN))
         {
             return new()
             {
@@ -206,7 +206,7 @@ public partial class CheckUpdateViewModel : MyReactiveObject
             }
             else if (item.CoreType == _v2rayN)
             {
-                if (Utils.IsPackagedInstall())
+                if (!CoreInfoManager.Instance.IsCheckUpdateSupported(_v2rayN))
                 {
                     await UpdateView(_v2rayN, ResUI.MsgNotSupport);
                     continue;

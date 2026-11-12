@@ -12,10 +12,14 @@ permissions:
 jobs:
   build:
     name: build ${{ matrix.arch }}
-    runs-on: ubuntu-24.04
+    # Windows runner: Inno Setup 6 is preinstalled there, so the Setup installer is built next to the zip.
+    runs-on: windows-2025
     strategy:
       matrix:
         arch: [ x64, arm64 ]
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,7 +29,7 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Package
+      - name: Package (zip + Setup)
         run: prosys/package-windows.sh ${{ matrix.arch }} "$GITHUB_WORKSPACE/dist"
 
       - uses: actions/upload-artifact@v4
@@ -49,8 +53,9 @@ jobs:
           body: |
             ProSyS VPN for Windows ${{ github.ref_name }}
 
-            - Portable zip for x64 and arm64 (unzip, then run ProSySVPN.exe)
+            - `*-setup.exe`: installer (recommended, no administrator rights needed)
+            - `*.zip`: portable build (unzip, then run ProSySVPN.exe)
             - Free service: 500 MB per PC per day, renewed at 00:00 Tehran time
-            - SHA-256 checksum next to each zip
+            - SHA-256 checksum next to each file
 
             Based on v2rayN (GPL-3.0). The original license and attribution are preserved.

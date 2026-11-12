@@ -70,6 +70,18 @@ internal static partial class WindowsUtils
         var attributeSize = (uint)Marshal.SizeOf(attribute);
         DwmSetWindowAttribute(hWnd, DWMWINDOWATTRIBUTE.DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref attribute, attributeSize);
         DwmSetWindowAttribute(hWnd, DWMWINDOWATTRIBUTE.DWMWA_USE_IMMERSIVE_DARK_MODE, ref attribute, attributeSize);
+
+        // ProSyS: paint the native title bar in the app's background colour, even when Windows
+        // "show accent colour on title bars" is on (Windows 11+, ignored on older builds).
+        if (dark)
+        {
+            var caption = 0x00060705; // COLORREF (0x00BBGGRR) for #050706
+            var text = 0x00F3F6F2;    // #F2F6F3
+            var border = 0x00121A14;  // #141A12
+            DwmSetWindowAttribute(hWnd, DWMWINDOWATTRIBUTE.DWMWA_CAPTION_COLOR, ref caption, attributeSize);
+            DwmSetWindowAttribute(hWnd, DWMWINDOWATTRIBUTE.DWMWA_TEXT_COLOR, ref text, attributeSize);
+            DwmSetWindowAttribute(hWnd, DWMWINDOWATTRIBUTE.DWMWA_BORDER_COLOR, ref border, attributeSize);
+        }
     }
 
     private static bool IsDarkTheme()
@@ -87,6 +99,9 @@ internal static partial class WindowsUtils
     {
         DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19,
         DWMWA_USE_IMMERSIVE_DARK_MODE = 20,
+        DWMWA_BORDER_COLOR = 34,
+        DWMWA_CAPTION_COLOR = 35,
+        DWMWA_TEXT_COLOR = 36,
     }
 
     #endregion Windows API

@@ -83,6 +83,7 @@ public class UIItem
     // ProSyS VPN
     public bool ProSySAdvanced { get; set; }
     public bool ProSySPresetApplied { get; set; }
+    public bool ProSySDnsRepaired { get; set; }
 
     public bool EnableAutoAdjustMainLvColWidth { get; set; }
     public int MainGirdHeight1 { get; set; }

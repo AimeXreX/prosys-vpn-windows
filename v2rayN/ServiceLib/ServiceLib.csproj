@@ -27,6 +27,9 @@
 		<EmbeddedResource Include="Sample\custom_routing_black" />
 		<EmbeddedResource Include="Sample\custom_routing_global" />
 		<EmbeddedResource Include="Sample\custom_routing_white" />
+		<EmbeddedResource Include="Sample\prosys_ir_template" />
+		<EmbeddedResource Include="Sample\prosys_ir_except" />
+		<EmbeddedResource Include="Sample\prosys_ir_all" />
 		<EmbeddedResource Include="Sample\dns_singbox_normal" />
 		<EmbeddedResource Include="Sample\dns_v2ray_normal" />
 		<EmbeddedResource Include="Sample\kill_as_sudo_linux_sh" />

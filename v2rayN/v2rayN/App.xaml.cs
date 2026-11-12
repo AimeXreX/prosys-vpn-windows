@@ -63,6 +63,7 @@ public partial class App
     private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         Logging.SaveLog("App_DispatcherUnhandledException", e.Exception);
+        Logging.SaveLog("FULL " + e.Exception);
         e.Handled = true;
     }
 

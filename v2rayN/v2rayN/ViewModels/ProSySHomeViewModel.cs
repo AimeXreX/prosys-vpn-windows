@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using v2rayN.ProSyS;
 
 namespace v2rayN.ViewModels;
@@ -153,6 +153,11 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
 
     public string ServerBadge => IsFreeServer ? "رایگان" : "شخصی";
 
+    private string _serverPing = string.Empty;
+    public string ServerPing { get => _serverPing; private set => Set(ref _serverPing, value, [nameof(HasServerPing)]); }
+
+    public bool HasServerPing => ServerPing.IsNotEmpty();
+
     private string _remainingText = "—";
     public string RemainingText { get => _remainingText; private set => Set(ref _remainingText, value); }
 
@@ -173,13 +178,13 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
 
     public bool HasError => ErrorText.IsNotEmpty();
 
-    private string _downSpeed = "۰";
+    private string _downSpeed = "—";
     public string DownSpeed { get => _downSpeed; private set => Set(ref _downSpeed, value); }
 
-    private string _upSpeed = "۰";
+    private string _upSpeed = "—";
     public string UpSpeed { get => _upSpeed; private set => Set(ref _upSpeed, value); }
 
-    public string VersionText { get; } = $"نسخهٔ ویندوز {ToFa(Utils.GetVersionInfo())}";
+    public string VersionText { get; } = $"نسخهٔ ویندوز {ToFa(ProSySBrand.Version)}";
 
     #endregion Bindable state
 
@@ -238,8 +243,8 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
 
     private async Task UseFreeServerAsync()
     {
-        await ProSySFreeManager.Instance.SyncAsync(_config, true);
-        if (!await ProSySFreeManager.Instance.SelectFreeServerAsync(_config))
+        await ProSySFreeManager.Instance.SyncAsync(_config, false);
+        if (!await ProSySFreeManager.Instance.SelectFastestFreeServerAsync(_config))
         {
             ErrorText = ProSySFreeManager.Instance.LastError ?? "سرور رایگان هنوز آماده نیست.";
         }
@@ -274,7 +279,7 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
         if (server != null)
         {
             IsFreeServer = Global.IsProSySManaged(server);
-            ServerName = server.Remarks.IsNotEmpty() ? server.Remarks : server.Address;
+            ServerName = CleanName(server.Remarks.IsNotEmpty() ? server.Remarks : server.Address);
         }
         else if (!ProSySFreeManager.Instance.HasManagedProfiles)
         {
@@ -289,6 +294,9 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
         var manager = ProSySFreeManager.Instance;
         var status = manager.Status;
         ErrorText = manager.LastError ?? string.Empty;
+        ServerPing = manager.IsTesting
+            ? "در حال یافتن سریع‌ترین سرور…"
+            : manager.BestDelayMs > 0 && IsFreeServer ? $"پینگ {ToFa(manager.BestDelayMs.ToString(CultureInfo.InvariantCulture))} میلی‌ثانیه · سریع‌ترین سرور" : string.Empty;
         if (status == null)
         {
             return;
@@ -323,13 +331,34 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
 
     private void ApplySpeed(ServerSpeedItem item)
     {
-        DownSpeed = $"{FormatBytes(item.ProxyDown)}/ث";
-        UpSpeed = $"{FormatBytes(item.ProxyUp)}/ث";
+        // StatisticsXrayService / StatisticsSingboxService report per-second deltas already divided into KB.
+        DownSpeed = $"{FormatBytes(item.ProxyDown * 1024)}/ث";
+        UpSpeed = $"{FormatBytes(item.ProxyUp * 1024)}/ث";
     }
 
     #endregion State refresh
 
     #region Helpers
+
+    /// <summary>WPF cannot draw colour flag emoji (they render as "NL"), so drop regional-indicator pairs and tidy spaces.</summary>
+    private static string CleanName(string value)
+    {
+        var sb = new StringBuilder(value.Length);
+        for (var i = 0; i < value.Length; i++)
+        {
+            if (char.IsHighSurrogate(value[i]) && i + 1 < value.Length)
+            {
+                var cp = char.ConvertToUtf32(value[i], value[i + 1]);
+                if (cp is >= 0x1F1E6 and <= 0x1F1FF)
+                {
+                    i++;
+                    continue;
+                }
+            }
+            sb.Append(value[i]);
+        }
+        return string.Join(' ', sb.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+    }
 
     private static string FormatBytes(long bytes)
     {

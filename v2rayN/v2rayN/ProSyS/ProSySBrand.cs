@@ -18,5 +18,9 @@ public static class ProSySBrand
 
     public const long DefaultDailyQuotaBytes = 512L * 1024 * 1024;
 
-    public static string UserAgent => $"ProSySVPN-Windows/{Utils.GetVersionInfo()}";
+    /// <summary>ProSyS release version (v2rayN.csproj &lt;Version&gt;), not the upstream ServiceLib version.</summary>
+    public static string Version { get; } =
+        System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "1.0.0";
+
+    public static string UserAgent => $"ProSySVPN-Windows/{Version}";
 }

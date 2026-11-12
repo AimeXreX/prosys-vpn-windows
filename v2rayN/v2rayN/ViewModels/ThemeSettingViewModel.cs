@@ -128,8 +128,9 @@ public partial class ThemeSettingViewModel : MyReactiveObject
     {
         static System.Windows.Media.SolidColorBrush B(uint argb)
         {
+            // The project builds with CheckForOverflowUnderflow, so mask each channel instead of narrowing a uint.
             var brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(
-                (byte)(argb >> 24), (byte)(argb >> 16), (byte)(argb >> 8), (byte)argb));
+                (byte)((argb >> 24) & 0xFF), (byte)((argb >> 16) & 0xFF), (byte)((argb >> 8) & 0xFF), (byte)(argb & 0xFF)));
             brush.Freeze();
             return brush;
         }

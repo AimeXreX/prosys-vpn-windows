@@ -45,7 +45,7 @@ public static class ConfigHandler
             InItem inItem = new()
             {
                 Protocol = nameof(EInboundProtocol.socks),
-                LocalPort = 10808,
+                LocalPort = 20808, // ProSyS: avoid clashing with a stock v2rayN on 10808
                 UdpEnabled = true,
                 SniffingEnabled = true,
                 RouteOnly = false,
@@ -92,7 +92,11 @@ public static class ConfigHandler
             IcmpRouting = Global.TunIcmpRoutingPolicies.First(),
             EnableLegacyProtect = true,
         };
-        config.GuiItem ??= new();
+        if (config.GuiItem == null)
+        {
+            // ProSyS: the home screen shows live speed, which needs the statistics service from the first run.
+            config.GuiItem = new() { EnableStatistics = true, DisplayRealTimeSpeed = true };
+        }
         if (!Global.RootCertProviders.Contains(config.GuiItem.RootCertProvider))
         {
             config.GuiItem.RootCertProvider = Global.RootCertProviders.First();
@@ -2586,8 +2590,13 @@ public static class ConfigHandler
     /// <param name="config">Current configuration</param>
     /// <param name="routingItem">Routing item to set as default</param>
     /// <returns>0 if successful</returns>
-    public static async Task<int> SetDefaultRouting(Config config, RoutingItem routingItem)
+    public static async Task<int> SetDefaultRouting(Config config, RoutingItem? routingItem)
     {
+        // A brand-new database has no routing rows yet when GetDefaultRouting first runs.
+        if (routingItem == null)
+        {
+            return -1;
+        }
         var items = await AppManager.Instance.RoutingItems();
         if (items.Any(t => t.Id == routingItem.Id && t.IsActive == true))
         {
@@ -2661,6 +2670,13 @@ public static class ConfigHandler
     {
         using var downloadHandle = await DownloadService.CreateDownloadServiceWithCheck();
         var templateContent = await downloadHandle.TryDownloadString(config.ConstItem.RouteRulesTemplateSourceUrl);
+        var isIran = config.ConstItem.RouteRulesTemplateSourceUrl == Global.RoutingRulesSources[2];
+        if (templateContent.IsNullOrEmpty() && isIran)
+        {
+            // ProSyS: GitHub may be unreachable on first run in Iran; ship the Iran template instead of
+            // falling back to the built-in mainland-China rule sets.
+            templateContent = EmbedUtils.GetEmbedText(Global.NamespaceSample + "prosys_ir_template");
+        }
         if (templateContent.IsNullOrEmpty())
         {
             return await InitBuiltinRouting(config, blImportAdvancedRules); // fallback
@@ -2690,6 +2706,16 @@ public static class ConfigHandler
             var ruleSetsString = !item.RuleSet.IsNullOrEmpty()
                 ? item.RuleSet
                 : await downloadHandle.TryDownloadString(item.Url);
+            if (ruleSetsString.IsNullOrEmpty() && isIran && item.Url.IsNotEmpty())
+            {
+                var embedded = item.Url.EndsWith("all_except_ir.json", StringComparison.OrdinalIgnoreCase) ? "prosys_ir_except"
+                    : item.Url.EndsWith("all.json", StringComparison.OrdinalIgnoreCase) ? "prosys_ir_all"
+                    : null;
+                if (embedded != null)
+                {
+                    ruleSetsString = EmbedUtils.GetEmbedText(Global.NamespaceSample + embedded);
+                }
+            }
 
             if (ruleSetsString.IsNullOrEmpty())
             {
@@ -3054,26 +3080,21 @@ public static class ConfigHandler
                 config.ConstItem.SrsSourceUrl = Global.SingboxRulesetSources[2];
                 config.ConstItem.RouteRulesTemplateSourceUrl = Global.RoutingRulesSources[2];
 
-                var xrayDnsIran = await GetExternalDNSItem(ECoreType.Xray, Global.DNSTemplateSources[2] + "v2ray.json");
-                var singboxDnsIran = await GetExternalDNSItem(ECoreType.sing_box, Global.DNSTemplateSources[2] + "sing_box.json");
+                // ProSyS: keep the built-in DNS. The Iran repo no longer ships simple_dns.json (404), and the fallback
+                // enabled its full v2ray.json DNS object, which this build splits as a server list, so Xray refused to start.
                 var simpleDnsIran = await GetExternalSimpleDNSItem(Global.DNSTemplateSources[2] + "simple_dns.json");
-
-                if (simpleDnsIran == null)
-                {
-                    xrayDnsIran.Enabled = true;
-                    singboxDnsIran.Enabled = true;
-                    config.SimpleDNSItem = InitBuiltinSimpleDNS();
-                }
-                else
-                {
-                    config.SimpleDNSItem = simpleDnsIran;
-                }
-                await SaveDNSItems(config, xrayDnsIran);
-                await SaveDNSItems(config, singboxDnsIran);
+                config.SimpleDNSItem = IsUsableSimpleDns(simpleDnsIran) ? simpleDnsIran! : InitBuiltinSimpleDNS();
                 break;
         }
 
         return true;
+    }
+
+    private static bool IsUsableSimpleDns(SimpleDNSItem? item)
+    {
+        static bool Plain(string? value) => value.IsNullOrEmpty() || (!value.Contains('{') && !value.Contains('\n'));
+        return item != null && item.DirectDNS.IsNotEmpty() && item.RemoteDNS.IsNotEmpty()
+            && Plain(item.DirectDNS) && Plain(item.RemoteDNS) && Plain(item.BootstrapDNS);
     }
 
     #endregion Regional Presets

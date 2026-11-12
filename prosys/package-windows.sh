@@ -43,7 +43,32 @@ done
 cp "$ROOT/LICENSE" "$PKG/LICENSE-GPL-3.0.txt"
 cp "$ROOT/prosys/README-FA.txt" "$PKG/راهنما.txt"
 
-(cd "$WORK" && zip -qr -9 "$OUT/$NAME.zip" "$NAME")
+rm -f "$OUT/$NAME.zip"
+if command -v zip >/dev/null 2>&1; then
+  (cd "$WORK" && zip -qr -9 "$OUT/$NAME.zip" "$NAME")
+else
+  # Git Bash on Windows ships without zip; fall back to PowerShell.
+  powershell.exe -NoProfile -Command "Compress-Archive -Path '$(cygpath -w "$PKG")' -DestinationPath '$(cygpath -w "$OUT")\\$NAME.zip' -CompressionLevel Optimal"
+fi
 (cd "$OUT" && sha256sum "$NAME.zip" > "$NAME.zip.sha256")
 echo "==> $OUT/$NAME.zip"
+
+# Setup installer (Windows only, needs Inno Setup 6). Set ISCC to override the compiler path.
+ISCC="${ISCC:-}"
+if [ -z "$ISCC" ]; then
+  for c in "${LOCALAPPDATA:-}/Programs/Inno Setup 6/ISCC.exe" "${PROGRAMFILES:-}/Inno Setup 6/ISCC.exe" "/c/Program Files (x86)/Inno Setup 6/ISCC.exe"; do
+    [ -f "$c" ] && ISCC="$c" && break
+  done
+fi
+if [ -n "$ISCC" ] && command -v cygpath >/dev/null 2>&1; then
+  echo "==> Building Setup"
+  # MSYS2_ARG_CONV_EXCL stops Git Bash from rewriting the /D switches as file paths.
+  MSYS2_ARG_CONV_EXCL='*' "$ISCC" /Q "/DAppVersion=$VERSION" "/DArch=$ARCH" "/DSourceDir=$(cygpath -w "$PKG")" "/DOutputDir=$(cygpath -w "$OUT")" \
+    "$(cygpath -w "$ROOT/prosys/installer/ProSySVPN.iss")"
+  SETUP="$NAME-setup.exe"
+  (cd "$OUT" && sha256sum "$SETUP" > "$SETUP.sha256")
+  echo "==> $OUT/$SETUP"
+else
+  echo "==> Inno Setup not found, skipping the Setup installer"
+fi
 rm -rf "$WORK"

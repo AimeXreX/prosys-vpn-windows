@@ -337,7 +337,8 @@ public class CertPemManager
 
     private bool IsSystemRootCertProvider()
     {
-        return _config.GuiItem.RootCertProvider != Global.ChromeRootProvider && _config.GuiItem.RootCertProvider != Global.MozillaRootProvider;
+        var provider = _config?.GuiItem?.RootCertProvider;
+        return provider != Global.ChromeRootProvider && provider != Global.MozillaRootProvider;
     }
 
     public X509ChainPolicy? BuildCertificateChainPolicy()

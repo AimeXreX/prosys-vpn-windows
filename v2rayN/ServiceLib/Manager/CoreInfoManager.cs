@@ -76,7 +76,8 @@ public sealed class CoreInfoManager
     {
         return type switch
         {
-            ECoreType.v2rayN => !Utils.IsPackagedInstall(),
+            // ProSyS: never self-update from 2dust/v2rayN releases, that would replace ProSyS VPN with stock v2rayN.
+            ECoreType.v2rayN => false,
             ECoreType.Xray => true,
             ECoreType.mihomo => true,
             ECoreType.sing_box => true,

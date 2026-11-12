@@ -565,6 +565,12 @@
                                     FontWeight="Bold"
                                     Text="{Binding ServerName}"
                                     TextTrimming="CharacterEllipsis" />
+                                <TextBlock
+                                    Margin="0,4,0,0"
+                                    FontSize="11"
+                                    Foreground="{StaticResource PsMint}"
+                                    Text="{Binding ServerPing}"
+                                    Visibility="{Binding HasServerPing, Converter={StaticResource BoolToVis}}" />
                                 <UniformGrid Margin="0,14,0,0" Columns="2">
                                     <StackPanel>
                                         <TextBlock FontSize="11" Foreground="{StaticResource PsMuted}" Text="دانلود" />
@@ -587,7 +593,7 @@
                                     Margin="0,14,0,0"
                                     HorizontalAlignment="Stretch"
                                     Command="{Binding UseFreeServerCmd}"
-                                    Content="استفاده از سرور رایگان"
+                                    Content="سریع‌ترین سرور رایگان"
                                     Style="{StaticResource PsGhostButton}" />
                             </StackPanel>
                         </Border>

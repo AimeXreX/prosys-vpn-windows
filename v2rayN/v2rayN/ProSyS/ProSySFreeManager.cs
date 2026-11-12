@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using Microsoft.Win32;
+using ServiceLib.Services;
 
 namespace v2rayN.ProSyS;
 
@@ -129,6 +130,71 @@ public sealed class ProSySFreeManager
         }
     }
 
+    /// <summary>Real delay (ms) of the free server picked by the last fastest-server test, or 0 when unknown.</summary>
+    public int BestDelayMs { get; private set; }
+
+    public bool IsTesting { get; private set; }
+
+    private int _testing;
+
+    /// <summary>
+    /// Real-pings every managed free endpoint (direct, CDN and operator-specific variants) through a temporary core and
+    /// makes the fastest one active. Falls back to the first server when nothing answers.
+    /// </summary>
+    public async Task<bool> SelectFastestFreeServerAsync(Config config)
+    {
+        var managed = await AppManager.Instance.ProfileItems(Global.ProSySManagedSubId);
+        if (managed is not { Count: > 1 } || Interlocked.Exchange(ref _testing, 1) == 1)
+        {
+            return await SelectFreeServerAsync(config);
+        }
+
+        IsTesting = true;
+        StatusChanged?.Invoke();
+        try
+        {
+            // The speed test builds core configs, which needs the main window's Init() to have finished.
+            await ServiceLib.ViewModels.MainWindowViewModel.InitCompleted.WaitAsync(TimeSpan.FromSeconds(90));
+
+            var delays = new System.Collections.Concurrent.ConcurrentDictionary<string, int>();
+            var speedtest = new SpeedtestService(config, result =>
+            {
+                if (result.IndexId.IsNotEmpty() && int.TryParse(result.Delay, out var ms) && ms > 0)
+                {
+                    delays[result.IndexId!] = ms;
+                }
+                return Task.CompletedTask;
+            });
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            await speedtest.RunLoop(ESpeedActionType.Realping, managed, timeout.Token);
+
+            if (delays.IsEmpty)
+            {
+                return await SelectFreeServerAsync(config);
+            }
+            var best = delays.MinBy(kv => kv.Value);
+            BestDelayMs = best.Value;
+            Logging.SaveLog($"{Tag}: fastest free server {best.Key} ({best.Value} ms) of {delays.Count}/{managed.Count}");
+            if (config.IndexId != best.Key)
+            {
+                await ConfigHandler.SetDefaultServerIndex(config, best.Key);
+                AppEvents.ProSySProfilesChanged.Publish();
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog(Tag, ex);
+            return await SelectFreeServerAsync(config);
+        }
+        finally
+        {
+            IsTesting = false;
+            Interlocked.Exchange(ref _testing, 0);
+            StatusChanged?.Invoke();
+        }
+    }
+
     /// <summary>Selects the first managed free server as the active profile.</summary>
     public async Task<bool> SelectFreeServerAsync(Config config)
     {
@@ -243,6 +309,12 @@ public sealed class ProSySFreeManager
                 await SelectFreeServerAsync(config);
             }
             AppEvents.ProSySProfilesChanged.Publish();
+
+            // Endpoints may have changed: re-pick the fastest in the background, but never override a personal server.
+            if (Global.IsProSySManaged(await ConfigHandler.GetDefaultServer(config)))
+            {
+                _ = Task.Run(() => SelectFastestFreeServerAsync(config));
+            }
         }
     }
 
@@ -293,7 +365,7 @@ public sealed class ProSySFreeManager
 
     private static string FallbackSeed()
     {
-        var path = Utils.GetConfigPath(FallbackIdFile);
+        var path = Path.Combine(Path.GetDirectoryName(TokenPath())!, FallbackIdFile);
         if (File.Exists(path))
         {
             var value = File.ReadAllText(path).Trim();
@@ -307,11 +379,27 @@ public sealed class ProSySFreeManager
         return created;
     }
 
+    /// <summary>
+    /// The token lives per Windows user (%LOCALAPPDATA%\ProSySVPN), not in the portable app folder. The backend answers
+    /// 409 when a known PC registers again without its token, so losing it on every re-extract or update locked users out.
+    /// </summary>
+    private static string TokenPath()
+    {
+        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ProSySVPN");
+        Directory.CreateDirectory(dir);
+        return Path.Combine(dir, TokenFile);
+    }
+
     private static string? LoadToken()
     {
         try
         {
-            var path = Utils.GetConfigPath(TokenFile);
+            var path = TokenPath();
+            var legacy = Utils.GetConfigPath(TokenFile);
+            if (!File.Exists(path) && File.Exists(legacy))
+            {
+                File.Copy(legacy, path);
+            }
             if (!File.Exists(path))
             {
                 return null;
@@ -331,7 +419,7 @@ public sealed class ProSySFreeManager
         try
         {
             var cipher = ProtectedData.Protect(Encoding.UTF8.GetBytes(token), Entropy, DataProtectionScope.CurrentUser);
-            File.WriteAllBytes(Utils.GetConfigPath(TokenFile), cipher);
+            File.WriteAllBytes(TokenPath(), cipher);
         }
         catch (Exception ex)
         {
@@ -343,12 +431,15 @@ public sealed class ProSySFreeManager
     {
         _token = null;
         _subscriptionUrl = null;
-        try
+        foreach (var path in new[] { TokenPath(), Utils.GetConfigPath(TokenFile) })
         {
-            File.Delete(Utils.GetConfigPath(TokenFile));
-        }
-        catch
-        {
+            try
+            {
+                File.Delete(path);
+            }
+            catch
+            {
+            }
         }
     }
 
