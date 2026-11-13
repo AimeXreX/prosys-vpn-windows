@@ -144,9 +144,31 @@ public sealed class ProSySFreeManager
     public async Task<bool> SelectFastestFreeServerAsync(Config config)
     {
         var managed = await AppManager.Instance.ProfileItems(Global.ProSySManagedSubId);
-        if (managed is not { Count: > 1 } || Interlocked.Exchange(ref _testing, 1) == 1)
+        if (managed is not { Count: > 1 })
         {
             return await SelectFreeServerAsync(config);
+        }
+        var best = await SelectFastestAsync(config, managed);
+        return best != null || await SelectFreeServerAsync(config);
+    }
+
+    /// <summary>Label of the group the last fastest-server test ran on (shown next to the ping).</summary>
+    public string? BestSourceName { get; private set; }
+
+    /// <summary>
+    /// Real-pings the given servers through temporary cores and makes the fastest one active.
+    /// Returns the chosen server, or null when nothing answered (the active server is then left alone).
+    /// </summary>
+    public async Task<ProfileItem?> SelectFastestAsync(Config config, List<ProfileItem> candidates, string? sourceName = null, CancellationToken ct = default)
+    {
+        candidates = candidates.Where(p => p.ConfigType != EConfigType.Custom).ToList();
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+        if (Interlocked.Exchange(ref _testing, 1) == 1)
+        {
+            return null;
         }
 
         IsTesting = true;
@@ -154,7 +176,7 @@ public sealed class ProSySFreeManager
         try
         {
             // The speed test builds core configs, which needs the main window's Init() to have finished.
-            await ServiceLib.ViewModels.MainWindowViewModel.InitCompleted.WaitAsync(TimeSpan.FromSeconds(90));
+            await ServiceLib.ViewModels.MainWindowViewModel.InitCompleted.WaitAsync(TimeSpan.FromSeconds(90), ct);
 
             var delays = new System.Collections.Concurrent.ConcurrentDictionary<string, int>();
             var speedtest = new SpeedtestService(config, result =>
@@ -165,27 +187,38 @@ public sealed class ProSySFreeManager
                 }
                 return Task.CompletedTask;
             });
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            await speedtest.RunLoop(ESpeedActionType.Realping, managed, timeout.Token);
+            // Big subscriptions are tested in batches; give them more time, but never hang the connect button.
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(TimeSpan.FromSeconds(Math.Clamp(20 + candidates.Count / 2, 30, 120)));
+            try
+            {
+                await speedtest.RunLoop(ESpeedActionType.Realping, candidates, timeout.Token);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // Timed out: use whatever answered so far.
+            }
 
             if (delays.IsEmpty)
             {
-                return await SelectFreeServerAsync(config);
+                Logging.SaveLog($"{Tag}: no server answered of {candidates.Count} ({sourceName})");
+                return null;
             }
             var best = delays.MinBy(kv => kv.Value);
             BestDelayMs = best.Value;
-            Logging.SaveLog($"{Tag}: fastest free server {best.Key} ({best.Value} ms) of {delays.Count}/{managed.Count}");
+            BestSourceName = sourceName;
+            Logging.SaveLog($"{Tag}: fastest server {best.Key} ({best.Value} ms) of {delays.Count}/{candidates.Count} ({sourceName})");
             if (config.IndexId != best.Key)
             {
                 await ConfigHandler.SetDefaultServerIndex(config, best.Key);
                 AppEvents.ProSySProfilesChanged.Publish();
             }
-            return true;
+            return candidates.FirstOrDefault(p => p.IndexId == best.Key);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             Logging.SaveLog(Tag, ex);
-            return await SelectFreeServerAsync(config);
+            return null;
         }
         finally
         {

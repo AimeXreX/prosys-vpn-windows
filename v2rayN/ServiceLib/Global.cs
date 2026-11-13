@@ -9,6 +9,14 @@ public class Global
     public const string ProSySManagedLockedMsg = "این سرور، سرویس رایگان مدیریت‌شدهٔ ProSyS است و قابل ویرایش، کپی یا اشتراک‌گذاری نیست.";
 
     public static bool IsProSySManaged(ProfileItem? item) => item?.Subid == ProSySManagedSubId;
+
+    // ProSyS: Iranian domains are resolved by an Iranian resolver (Electro), not v2rayN's mainland-China default
+    // (119.29.29.29). Iranian CDNs then answer with Iranian edge IPs, which keeps those sites on the direct route.
+    public const string ProSySIranDirectDNS = "78.157.42.100,78.157.42.101";
+    public const string ProSySIranBootstrapDNS = "78.157.42.100";
+
+    /// <summary>Bumped when ProSyS needs to migrate existing installs once (routing / DNS repairs).</summary>
+    public const int ProSySConfigVersion = 2;
     public const string GithubUrl = "https://github.com";
     public const string GithubApiUrl = "https://api.github.com/repos";
     public const string GeoUrl = "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/{0}.dat";

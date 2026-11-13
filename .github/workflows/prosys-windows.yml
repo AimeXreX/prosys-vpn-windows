@@ -46,16 +46,16 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      - uses: actions/checkout@v4
+        with:
+          path: src
+          sparse-checkout: prosys/release-notes
+      - name: Pick release notes
+        run: |
+          notes="src/prosys/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$notes" ]; then cp "$notes" release-notes.md; else echo "ProSyS VPN for Windows ${GITHUB_REF_NAME}" > release-notes.md; fi
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
-          body: |
-            ProSyS VPN for Windows ${{ github.ref_name }}
-
-            - `*-setup.exe`: installer (recommended, no administrator rights needed)
-            - `*.zip`: portable build (unzip, then run ProSySVPN.exe)
-            - Free service: 500 MB per PC per day, renewed at 00:00 Tehran time
-            - SHA-256 checksum next to each file
-
-            Based on v2rayN (GPL-3.0). The original license and attribution are preserved.
+          body_path: release-notes.md

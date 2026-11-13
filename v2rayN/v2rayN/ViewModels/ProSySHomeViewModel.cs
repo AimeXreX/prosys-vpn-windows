@@ -40,6 +40,22 @@ public sealed class ProSySCommand(Func<Task> run, Func<bool>? canRun = null) : I
     }
 }
 
+/// <summary>One choice in the quick-connect picker: every subscription, a single subscription, or the current server.</summary>
+public sealed class ProSySQuickSource
+{
+    public const string All = "all";
+    public const string Current = "current";
+    public const string Manual = "manual";
+
+    public required string Id { get; init; }
+    public required string Title { get; init; }
+    public required string Subtitle { get; init; }
+    public string Icon { get; init; } = "Web";
+    public bool IsSelected { get; init; }
+    public bool IsEnabled { get; init; } = true;
+    public required ICommand PickCmd { get; init; }
+}
+
 /// <summary>State of the gaming-style home screen: big connect orb, daily quota, live speed and purchase links.</summary>
 public sealed class ProSySHomeViewModel : INotifyPropertyChanged
 {
@@ -68,6 +84,13 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
             AdvancedRequested?.Invoke();
             return Task.CompletedTask;
         });
+        ChangeSourceCmd = new ProSySCommand(ChangeSourceAsync);
+        CancelPickerCmd = new ProSySCommand(() =>
+        {
+            ClosePicker(null);
+            return Task.CompletedTask;
+        });
+        _rememberSource = _config.UiItem.ProSySQuickRemember;
 
         ProSySFreeManager.Instance.StatusChanged += () => Application.Current?.Dispatcher.BeginInvoke(ApplyFreeStatus);
 
@@ -86,6 +109,11 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
         ApplyFreeStatus();
         _ = RefreshLocalStateAsync();
         _ = InitialSyncAsync();
+        _ = Task.Run(async () =>
+        {
+            var sources = await BuildSourcesAsync(_config.UiItem.ProSySQuickSource);
+            Application.Current?.Dispatcher.BeginInvoke(() => UpdateSourceText(sources));
+        });
     }
 
     private async Task InitialSyncAsync()
@@ -105,6 +133,8 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
     public ICommand OpenBotCmd { get; }
     public ICommand OpenChannelCmd { get; }
     public ICommand ShowAdvancedCmd { get; }
+    public ICommand ChangeSourceCmd { get; }
+    public ICommand CancelPickerCmd { get; }
 
     #endregion Commands
 
@@ -186,6 +216,18 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
 
     public string VersionText { get; } = $"نسخهٔ ویندوز {ToFa(ProSySBrand.Version)}";
 
+    private bool _isPickerOpen;
+    public bool IsPickerOpen { get => _isPickerOpen; private set => Set(ref _isPickerOpen, value); }
+
+    private List<ProSySQuickSource> _quickSources = [];
+    public List<ProSySQuickSource> QuickSources { get => _quickSources; private set => Set(ref _quickSources, value); }
+
+    private bool _rememberSource;
+    public bool RememberSource { get => _rememberSource; set => Set(ref _rememberSource, value); }
+
+    private string _sourceText = "منبع اتصال: هر بار بپرس";
+    public string SourceText { get => _sourceText; private set => Set(ref _sourceText, value); }
+
     #endregion Bindable state
 
     #region Actions
@@ -198,9 +240,25 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
             return;
         }
 
+        // Quick connect: ask which subscription to ping (or all of them), unless the user asked us to remember.
+        var sourceId = _config.UiItem.ProSySQuickRemember ? _config.UiItem.ProSySQuickSource : null;
+        var sources = await BuildSourcesAsync(sourceId ?? _config.UiItem.ProSySQuickSource);
+        if (sourceId == null || sources.All(s => s.Id != sourceId || !s.IsEnabled))
+        {
+            sourceId = await AskSourceAsync(sources);
+            if (sourceId == null)
+            {
+                return;
+            }
+        }
+
         IsBusy = true;
         try
         {
+            if (!await PickFastestAsync(sourceId, sources.First(s => s.Id == sourceId).Title))
+            {
+                return;
+            }
             var server = await ConfigHandler.GetDefaultServer(_config);
             if (server == null || (Global.IsProSySManaged(server) && !ProSySFreeManager.Instance.HasManagedProfiles))
             {
@@ -229,6 +287,154 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
             await RefreshLocalStateAsync();
         }
     }
+
+    #region Quick connect source
+
+    private TaskCompletionSource<string?>? _picker;
+
+    /// <summary>Picker choices: all subscriptions, each subscription with servers (the free one included), manual servers, current server.</summary>
+    private async Task<List<ProSySQuickSource>> BuildSourcesAsync(string? selectedId)
+    {
+        var profiles = await AppManager.Instance.ProfileItems(string.Empty) ?? [];
+        var subs = await AppManager.Instance.SubItems() ?? [];
+        var exhausted = ProSySFreeManager.Instance.Status?.Exhausted == true;
+        var current = await ConfigHandler.GetDefaultServer(_config);
+        selectedId ??= ProSySQuickSource.All;
+
+        var list = new List<ProSySQuickSource>();
+        ProSySQuickSource Make(string id, string title, string subtitle, string icon, bool enabled = true) => new()
+        {
+            Id = id,
+            Title = title,
+            Subtitle = subtitle,
+            Icon = icon,
+            IsEnabled = enabled,
+            IsSelected = id == selectedId,
+            PickCmd = new ProSySCommand(() =>
+            {
+                ClosePicker(id);
+                return Task.CompletedTask;
+            }, () => enabled),
+        };
+
+        var testable = profiles.Where(p => !(exhausted && Global.IsProSySManaged(p))).ToList();
+        list.Add(Make(ProSySQuickSource.All, "همهٔ اشتراک‌ها",
+            $"پینگ {ToFa(testable.Count.ToString(CultureInfo.InvariantCulture))} سرور گرفته و سریع‌ترین وصل می‌شود", "LightningBolt", testable.Count > 0));
+
+        foreach (var sub in subs.OrderBy(s => s.Id == Global.ProSySManagedSubId ? 0 : 1).ThenBy(s => s.Sort))
+        {
+            var count = profiles.Count(p => p.Subid == sub.Id);
+            if (count == 0)
+            {
+                continue;
+            }
+            var free = sub.Id == Global.ProSySManagedSubId;
+            var subtitle = free
+                ? exhausted ? "حجم رایگان امروز تمام شده است" : $"سرویس رایگان روزانه · {ToFa(count.ToString(CultureInfo.InvariantCulture))} سرور"
+                : $"{ToFa(count.ToString(CultureInfo.InvariantCulture))} سرور";
+            list.Add(Make(sub.Id, free ? "ProSyS رایگان (۵۰۰ مگ روزانه)" : CleanName(sub.Remarks.IsNotEmpty() ? sub.Remarks : "اشتراک"),
+                subtitle, free ? "Gift" : "CloudOutline", !(free && exhausted)));
+        }
+
+        var manual = profiles.Count(p => p.Subid.IsNullOrEmpty() || subs.All(s => s.Id != p.Subid));
+        if (manual > 0)
+        {
+            list.Add(Make(ProSySQuickSource.Manual, "سرورهای افزوده‌شدهٔ دستی", $"{ToFa(manual.ToString(CultureInfo.InvariantCulture))} سرور", "ServerNetwork"));
+        }
+        if (current != null)
+        {
+            list.Add(Make(ProSySQuickSource.Current, "همین سرور فعلی، بدون تست", CleanName(current.Remarks.IsNotEmpty() ? current.Remarks : current.Address), "CheckCircleOutline",
+                !(exhausted && Global.IsProSySManaged(current))));
+        }
+        return list;
+    }
+
+    private async Task<string?> AskSourceAsync(List<ProSySQuickSource> sources)
+    {
+        _picker?.TrySetResult(null);
+        _picker = new TaskCompletionSource<string?>();
+        QuickSources = sources;
+        IsPickerOpen = true;
+        var choice = await _picker.Task;
+        if (choice != null)
+        {
+            _config.UiItem.ProSySQuickSource = choice;
+            _config.UiItem.ProSySQuickRemember = RememberSource;
+            await ConfigHandler.SaveConfig(_config);
+        }
+        UpdateSourceText(sources);
+        return choice;
+    }
+
+    private void ClosePicker(string? choice)
+    {
+        IsPickerOpen = false;
+        _picker?.TrySetResult(choice);
+    }
+
+    private async Task ChangeSourceAsync()
+    {
+        var sources = await BuildSourcesAsync(_config.UiItem.ProSySQuickSource);
+        RememberSource = _config.UiItem.ProSySQuickRemember;
+        await AskSourceAsync(sources);
+    }
+
+    private void UpdateSourceText(List<ProSySQuickSource>? sources = null)
+    {
+        var id = _config.UiItem.ProSySQuickSource;
+        var title = sources?.FirstOrDefault(s => s.Id == id)?.Title;
+        SourceText = _config.UiItem.ProSySQuickRemember && title != null
+            ? $"منبع اتصال: {title}"
+            : "منبع اتصال: هر بار بپرس";
+    }
+
+    /// <summary>Real-pings the servers of the chosen source and activates the fastest. False when none answered.</summary>
+    private async Task<bool> PickFastestAsync(string sourceId, string title)
+    {
+        if (sourceId == ProSySQuickSource.Current)
+        {
+            return true;
+        }
+        var exhausted = ProSySFreeManager.Instance.Status?.Exhausted == true;
+        if (sourceId == Global.ProSySManagedSubId || sourceId == ProSySQuickSource.All)
+        {
+            // Make sure the free servers are there (first run, or the hourly refresh is due).
+            await ProSySFreeManager.Instance.SyncAsync(_config, false);
+        }
+
+        var profiles = await AppManager.Instance.ProfileItems(sourceId is ProSySQuickSource.All or ProSySQuickSource.Manual ? string.Empty : sourceId) ?? [];
+        if (sourceId == ProSySQuickSource.Manual)
+        {
+            var subIds = (await AppManager.Instance.SubItems() ?? []).Select(s => s.Id).ToHashSet();
+            profiles = profiles.Where(p => p.Subid.IsNullOrEmpty() || !subIds.Contains(p.Subid)).ToList();
+        }
+        if (exhausted)
+        {
+            profiles = profiles.Where(p => !Global.IsProSySManaged(p)).ToList();
+        }
+        if (profiles.Count == 0)
+        {
+            ErrorText = $"در «{title}» سروری برای تست وجود ندارد. اشتراک را در حالت پیشرفته به‌روزرسانی کنید.";
+            return false;
+        }
+
+        ErrorText = string.Empty;
+        ServerPing = $"در حال گرفتن پینگ {ToFa(profiles.Count.ToString(CultureInfo.InvariantCulture))} سرور از «{title}»…";
+        var best = await ProSySFreeManager.Instance.SelectFastestAsync(_config, profiles, title);
+        if (best == null)
+        {
+            ErrorText = $"هیچ‌کدام از سرورهای «{title}» پاسخ ندادند. منبع دیگری را انتخاب یا اشتراک را به‌روزرسانی کنید.";
+            ApplyFreeStatus();
+            return false;
+        }
+        // Let the main window reload the core with the new server before the proxy is switched on.
+        await Task.Delay(800);
+        await RefreshLocalStateAsync();
+        ApplyFreeStatus();
+        return true;
+    }
+
+    #endregion Quick connect source
 
     private async Task DisconnectAsync()
     {
@@ -294,9 +500,14 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
         var manager = ProSySFreeManager.Instance;
         var status = manager.Status;
         ErrorText = manager.LastError ?? string.Empty;
-        ServerPing = manager.IsTesting
-            ? "در حال یافتن سریع‌ترین سرور…"
-            : manager.BestDelayMs > 0 && IsFreeServer ? $"پینگ {ToFa(manager.BestDelayMs.ToString(CultureInfo.InvariantCulture))} میلی‌ثانیه · سریع‌ترین سرور" : string.Empty;
+        if (!manager.IsTesting || ServerPing.IsNullOrEmpty())
+        {
+            ServerPing = manager.IsTesting
+                ? "در حال یافتن سریع‌ترین سرور…"
+                : manager.BestDelayMs > 0
+                    ? $"پینگ {ToFa(manager.BestDelayMs.ToString(CultureInfo.InvariantCulture))} میلی‌ثانیه · سریع‌ترین سرور{(manager.BestSourceName.IsNotEmpty() ? $" از «{manager.BestSourceName}»" : string.Empty)}"
+                    : string.Empty;
+        }
         if (status == null)
         {
             return;

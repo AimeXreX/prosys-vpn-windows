@@ -13,4 +13,12 @@
         />
 		</dependentAssembly>
 	</dependency>
+	<!-- ProSyS 1.2.0: always run as Administrator so TUN mode and the system proxy connect reliably. -->
+	<trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+		<security>
+			<requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+				<requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+			</requestedPrivileges>
+		</security>
+	</trustInfo>
 </assembly>

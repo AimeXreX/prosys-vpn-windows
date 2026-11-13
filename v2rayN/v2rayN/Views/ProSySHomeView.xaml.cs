@@ -45,6 +45,14 @@ public partial class ProSySHomeView : UserControl
         Toggle(_busy, vm.IsBusy);
     }
 
+    private void OnPickerBackdropClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (DataContext is ProSySHomeViewModel vm && vm.CancelPickerCmd.CanExecute(null))
+        {
+            vm.CancelPickerCmd.Execute(null);
+        }
+    }
+
     private void Toggle(Storyboard storyboard, bool on)
     {
         if (on)

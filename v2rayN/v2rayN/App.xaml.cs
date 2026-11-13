@@ -23,6 +23,13 @@ public partial class App
     /// <param name="e"></param>
     protected override void OnStartup(StartupEventArgs e)
     {
+        // ProSyS: installer switches (stop / clean up an elevated copy) must run before the single-instance check.
+        if (ProSyS.ProSySMaintenance.HandleCommandLine(e.Args))
+        {
+            Environment.Exit(0);
+            return;
+        }
+
         var exePathKey = Utils.GetMd5(Utils.GetExePath());
 
         var rebootas = e.Args.Any(t => t == Global.RebootAs);
@@ -42,6 +49,7 @@ public partial class App
         }
 
         AppManager.Instance.WindowDialog = new WindowDialog();
+        _ = Task.Run(() => ProSyS.ProSySMaintenance.ApplyStartupChoicesAsync(AppManager.Instance.Config));
 
         AppManager.Instance.InitComponents();
 

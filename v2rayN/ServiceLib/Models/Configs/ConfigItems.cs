@@ -84,6 +84,11 @@ public class UIItem
     public bool ProSySAdvanced { get; set; }
     public bool ProSySPresetApplied { get; set; }
     public bool ProSySDnsRepaired { get; set; }
+    public int ProSySConfigVersion { get; set; }
+
+    /// <summary>Quick connect source: "all", "current" or a subscription id.</summary>
+    public string? ProSySQuickSource { get; set; }
+    public bool ProSySQuickRemember { get; set; }
 
     public bool EnableAutoAdjustMainLvColWidth { get; set; }
     public int MainGirdHeight1 { get; set; }

@@ -1,4 +1,4 @@
-; *** Inno Setup version 6.5.0+ Farsi messages ***
+﻿; *** Inno Setup version 6.5.0+ Farsi messages ***
 ;
 ; To download user-contributed translations of this file, go to:
 ;   https://jrsoftware.org/files/istrans/

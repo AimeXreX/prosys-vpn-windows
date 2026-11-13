@@ -280,6 +280,11 @@ public partial class MainWindowViewModel : MyReactiveObject
                 await Reload();
             });
 
+        AppEvents.ProSySSubscriptionSaved
+            .AsObservable()
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
+            .SubscribeAsync(async subId => await AutoUpdateNewSubscriptionAsync(subId));
+
         #endregion AppEvents
 
         ProfilesViewModel.RefreshServersRequested
@@ -345,6 +350,7 @@ public partial class MainWindowViewModel : MyReactiveObject
         await ConfigHandler.InitBuiltinDNS(_config);
         await RepairProSySDnsAsync();
         await EnsureIranRoutingAsync();
+        await MigrateProSySConfigAsync();
         await ConfigHandler.InitBuiltinFullConfigTemplate(_config);
         await ProfileExManager.Instance.Init();
         await CoreManager.Instance.Init(_config, UpdateHandler);
@@ -398,6 +404,57 @@ public partial class MainWindowViewModel : MyReactiveObject
         }
         await ConfigHandler.SaveConfig(_config);
         RxSchedulers.MainThreadScheduler.Schedule(async () => await StatusBarViewModel.RefreshRoutingsMenu());
+    }
+
+    /// <summary>
+    /// ProSyS 1.2.0, once per install: Iranian domains were resolved by v2rayN's mainland-China DNS (119.29.29.29),
+    /// and the downloaded Iran list sent 8.8.8.8 direct (poisoned by Iranian ISPs for blocked sites). Switch to the
+    /// Iranian resolver and refresh the "IR-" routing items from the bundled, tested rule sets.
+    /// </summary>
+    private async Task MigrateProSySConfigAsync()
+    {
+        if (_config.UiItem.ProSySConfigVersion >= Global.ProSySConfigVersion)
+        {
+            return;
+        }
+        try
+        {
+            var dns = _config.SimpleDNSItem ??= ConfigHandler.InitProSySIranSimpleDNS();
+            if (dns.DirectDNS.IsNullOrEmpty() || (Global.DomainDirectDNSAddress.Contains(dns.DirectDNS) && dns.DirectDNS != "localhost"))
+            {
+                dns.DirectDNS = Global.ProSySIranDirectDNS;
+            }
+            if (dns.BootstrapDNS.IsNullOrEmpty() || (Global.DomainPureIPDNSAddress.Contains(dns.BootstrapDNS) && dns.BootstrapDNS != "localhost"))
+            {
+                dns.BootstrapDNS = Global.ProSySIranBootstrapDNS;
+            }
+
+            foreach (var item in await AppManager.Instance.RoutingItems())
+            {
+                if (item.Remarks?.StartsWith("IR-") != true)
+                {
+                    continue;
+                }
+                var except = item.Remarks.Contains("\u0645\u0633\u062a\u0642\u06cc\u0645"); // "direct"
+                var rules = ConfigHandler.ProSySIranRuleSet(except ? "all_except_ir.json" : "all.json");
+                if (rules.IsNullOrEmpty())
+                {
+                    continue;
+                }
+                if (except)
+                {
+                    item.DomainStrategy = "IPOnDemand";
+                }
+                await ConfigHandler.AddBatchRoutingRules(item, rules);
+            }
+            _config.UiItem.ProSySConfigVersion = Global.ProSySConfigVersion;
+            await ConfigHandler.SaveConfig(_config);
+            Logging.SaveLog("ProSyS: migrated config to version " + Global.ProSySConfigVersion);
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog("MigrateProSySConfigAsync", ex);
+        }
     }
 
     private async Task RepairProSySDnsAsync()
@@ -648,6 +705,30 @@ public partial class MainWindowViewModel : MyReactiveObject
         if (await AppManager.Instance.WindowDialog.ShowDialogAsync(subSettingViewModel) == true)
         {
             await RefreshSubscriptions();
+        }
+    }
+
+    /// <summary>
+    /// ProSyS: a newly added subscription is fetched at once. Subscription hosts are often filtered in Iran, so when
+    /// the direct download brings no servers and a connection is up, try again through the proxy.
+    /// </summary>
+    private async Task AutoUpdateNewSubscriptionAsync(string subId)
+    {
+        try
+        {
+            await _initCompleted.Task;
+            await UpdateSubscriptionProcess(subId, false);
+            var profiles = await AppManager.Instance.ProfileItems(subId);
+            if (profiles is not { Count: > 0 } && (await ConfigHandler.GetDefaultServer(_config)) != null)
+            {
+                await UpdateSubscriptionProcess(subId, true);
+            }
+            await RefreshSubscriptions();
+            await RefreshServersDispatcherAsync();
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog("AutoUpdateNewSubscriptionAsync", ex);
         }
     }
 

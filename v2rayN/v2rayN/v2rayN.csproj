@@ -14,7 +14,7 @@
 		<AssemblyName>ProSySVPN</AssemblyName>
 		<RootNamespace>v2rayN</RootNamespace>
 		<Product>ProSyS VPN</Product>
-		<Version>1.1.0</Version>
+		<Version>1.2.0</Version>
 		<AssemblyTitle>ProSyS VPN for Windows</AssemblyTitle>
 		<Company>ProSyS</Company>
 	</PropertyGroup>

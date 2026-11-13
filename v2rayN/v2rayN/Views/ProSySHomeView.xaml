@@ -430,6 +430,25 @@
                                         </StackPanel>
                                     </CheckBox>
                                 </StackPanel>
+                                <Button
+                                    Margin="0,12,0,0"
+                                    HorizontalAlignment="Center"
+                                    Command="{Binding ChangeSourceCmd}"
+                                    Padding="12,5"
+                                    Style="{StaticResource PsQuietButton}"
+                                    ToolTip="انتخاب اشتراکی که اتصال سریع از بین سرورهایش سریع‌ترین را پیدا می‌کند">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon
+                                            Width="14"
+                                            Height="14"
+                                            VerticalAlignment="Center"
+                                            Kind="SwapHorizontal" />
+                                        <TextBlock
+                                            Margin="6,0,0,0"
+                                            FontSize="11"
+                                            Text="{Binding SourceText}" />
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </Grid>
                     </Grid>
@@ -624,6 +643,123 @@
                         Foreground="#FFC9C6"
                         Text="{Binding ErrorText}"
                         TextWrapping="Wrap" />
+                </DockPanel>
+            </Border>
+        </Grid>
+        <!--  Quick connect: which subscription should be pinged?  -->
+        <Grid Visibility="{Binding IsPickerOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="#C8050806" MouseLeftButtonDown="OnPickerBackdropClick" />
+            <Border
+                Width="470"
+                MaxHeight="560"
+                Padding="24,22"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="{StaticResource PsHeroGradient}"
+                BorderBrush="#40B8FF4D"
+                BorderThickness="1"
+                CornerRadius="24">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="60" Opacity="0.55" ShadowDepth="0" Color="#000000" />
+                </Border.Effect>
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top">
+                        <DockPanel>
+                            <materialDesign:PackIcon
+                                Width="22"
+                                Height="22"
+                                VerticalAlignment="Center"
+                                Foreground="{StaticResource PsAcid}"
+                                Kind="LightningBolt" />
+                            <TextBlock
+                                Margin="10,0,0,0"
+                                VerticalAlignment="Center"
+                                FontSize="19"
+                                FontWeight="Black"
+                                Text="اتصال سریع با کدام اشتراک؟" />
+                        </DockPanel>
+                        <TextBlock
+                            Margin="0,8,0,14"
+                            FontSize="12"
+                            Foreground="{StaticResource PsMuted}"
+                            Text="از همهٔ سرورهای منبع انتخاب‌شده پینگ واقعی گرفته می‌شود و به سریع‌ترین سرور وصل می‌شوید."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,14,0,0" DockPanel.Dock="Bottom">
+                        <CheckBox
+                            Content="انتخابم را به خاطر بسپار و دیگر نپرس"
+                            Foreground="{StaticResource PsInk}"
+                            IsChecked="{Binding RememberSource}" />
+                        <Button
+                            Margin="0,12,0,0"
+                            HorizontalAlignment="Stretch"
+                            Command="{Binding CancelPickerCmd}"
+                            Content="انصراف"
+                            Style="{StaticResource PsGhostButton}" />
+                    </StackPanel>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding QuickSources}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button
+                                        Margin="0,0,0,8"
+                                        HorizontalContentAlignment="Stretch"
+                                        Command="{Binding PickCmd}"
+                                        Cursor="Hand"
+                                        IsEnabled="{Binding IsEnabled}">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border
+                                                    x:Name="row"
+                                                    Padding="14,11"
+                                                    Background="#0AFFFFFF"
+                                                    BorderBrush="#14FFFFFF"
+                                                    BorderThickness="1"
+                                                    CornerRadius="14">
+                                                    <DockPanel>
+                                                        <materialDesign:PackIcon
+                                                            Width="22"
+                                                            Height="22"
+                                                            VerticalAlignment="Center"
+                                                            Foreground="{StaticResource PsAcid}"
+                                                            Kind="{Binding Icon}" />
+                                                        <StackPanel Margin="12,0,0,0">
+                                                            <TextBlock
+                                                                FontSize="14"
+                                                                FontWeight="Bold"
+                                                                Text="{Binding Title}"
+                                                                TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock
+                                                                Margin="0,2,0,0"
+                                                                FontSize="11"
+                                                                Foreground="{StaticResource PsMuted}"
+                                                                Text="{Binding Subtitle}"
+                                                                TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                    </DockPanel>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter TargetName="row" Property="BorderBrush" Value="#88B8FF4D" />
+                                                        <Setter TargetName="row" Property="Background" Value="#16B8FF4D" />
+                                                    </DataTrigger>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="row" Property="Background" Value="#22B8FF4D" />
+                                                        <Setter TargetName="row" Property="BorderBrush" Value="#AAB8FF4D" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter TargetName="row" Property="Opacity" Value="0.4" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </DockPanel>
             </Border>
         </Grid>

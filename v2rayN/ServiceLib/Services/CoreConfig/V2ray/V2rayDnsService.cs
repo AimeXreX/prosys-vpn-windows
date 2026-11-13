@@ -25,7 +25,9 @@ public partial class CoreConfigV2rayService
 
                 dnsObj["tag"] = Global.DnsTag;
                 _coreConfig.dns = dnsObj;
-                _coreConfig.routing.rules.Add(new RulesItem4Ray
+                // ProSyS: DNS rules go first; rule sets ending in a catch-all ("port 0-65535 -> proxy", as the Iran
+                // set does) would otherwise swallow them.
+                _coreConfig.routing.rules.Insert(0, new RulesItem4Ray
                 {
                     type = "field",
                     inboundTag = [Global.DnsTag],
@@ -97,25 +99,26 @@ public partial class CoreConfigV2rayService
                 .Where(tag => tag is not null && tag.StartsWith(Global.DirectDnsTag, StringComparison.Ordinal))
                 .Select(tag => tag!)
                 .ToList();
-            if (directDnsTags.Count > 0)
-            {
-                _coreConfig.routing.rules.Add(new()
-                {
-                    type = "field",
-                    inboundTag = directDnsTags,
-                    outboundTag = Global.DirectTag,
-                });
-            }
-
+            // ProSyS: DNS rules go first. The Iran rule set ends with a catch-all proxy rule, so rules appended after
+            // it never matched and lookups meant for the direct resolver went through the tunnel.
             var finalRule = BuildFinalRule();
             dnsItem.tag = Global.DnsTag;
-            _coreConfig.routing.rules.Add(new()
+            _coreConfig.routing.rules.Insert(0, new()
             {
                 type = "field",
                 inboundTag = [Global.DnsTag],
                 outboundTag = finalRule.outboundTag,
                 balancerTag = finalRule.balancerTag,
             });
+            if (directDnsTags.Count > 0)
+            {
+                _coreConfig.routing.rules.Insert(0, new()
+                {
+                    type = "field",
+                    inboundTag = directDnsTags,
+                    outboundTag = Global.DirectTag,
+                });
+            }
 
             _coreConfig.dns = (JsonObject)JsonUtils.SerializeToNode(dnsItem);
         }

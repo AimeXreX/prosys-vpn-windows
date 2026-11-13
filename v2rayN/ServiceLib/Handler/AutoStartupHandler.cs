@@ -39,6 +39,13 @@ public static class AutoStartupHandler
 
     #region Windows
 
+    /// <summary>ProSyS: removes the start-with-Windows task and Run value (used by the uninstaller).</summary>
+    [SupportedOSPlatform("windows")]
+    public static void ClearWindowsAutoRun()
+    {
+        ClearTaskWindows().GetAwaiter().GetResult();
+    }
+
     [SupportedOSPlatform("windows")]
     private static async Task ClearTaskWindows()
     {

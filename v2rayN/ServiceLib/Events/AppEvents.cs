@@ -17,4 +17,7 @@ public static class AppEvents
 
     /// <summary>ProSyS: managed free profiles changed; refresh the server list and reload the core.</summary>
     public static readonly EventChannel<RxVoid> ProSySProfilesChanged = new();
+
+    /// <summary>ProSyS: a subscription was added or its URL changed; its servers should be fetched right away.</summary>
+    public static readonly EventChannel<string> ProSySSubscriptionSaved = new();
 }

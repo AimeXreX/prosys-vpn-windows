@@ -2314,9 +2314,16 @@ public static class ConfigHandler
     public static async Task<int> AddSubItem(Config config, SubItem subItem)
     {
         var item = await AppManager.Instance.GetSubItem(subItem.Id);
+        // ProSyS: fetch the servers of a new subscription (or one whose link changed) immediately.
+        var needsFetch = subItem.Url.IsNotEmpty() && (item is null || item.Url != subItem.Url || item.MoreUrl != subItem.MoreUrl);
         if (item is null)
         {
             item = subItem;
+            // ProSyS: keep new subscriptions fresh every 6 hours unless the user chose an interval.
+            if (item.AutoUpdateInterval <= 0 && item.Url.IsNotEmpty())
+            {
+                item.AutoUpdateInterval = 360;
+            }
         }
         else
         {
@@ -2356,6 +2363,10 @@ public static class ConfigHandler
         }
         if (await SQLiteHelper.Instance.ReplaceAsync(item) > 0)
         {
+            if (needsFetch && item.Enabled && item.Id != Global.ProSySManagedSubId)
+            {
+                AppEvents.ProSySSubscriptionSaved.Publish(item.Id);
+            }
             return 0;
         }
         else
@@ -2669,14 +2680,13 @@ public static class ConfigHandler
     public static async Task<int> InitExternalRouting(Config config, bool blImportAdvancedRules = false)
     {
         using var downloadHandle = await DownloadService.CreateDownloadServiceWithCheck();
-        var templateContent = await downloadHandle.TryDownloadString(config.ConstItem.RouteRulesTemplateSourceUrl);
         var isIran = config.ConstItem.RouteRulesTemplateSourceUrl == Global.RoutingRulesSources[2];
-        if (templateContent.IsNullOrEmpty() && isIran)
-        {
-            // ProSyS: GitHub may be unreachable on first run in Iran; ship the Iran template instead of
-            // falling back to the built-in mainland-China rule sets.
-            templateContent = EmbedUtils.GetEmbedText(Global.NamespaceSample + "prosys_ir_template");
-        }
+        // ProSyS: the Iran rules are bundled and always used as shipped (tested with this build) instead of whatever
+        // the upstream repo serves today. GitHub is often unreachable in Iran, and the upstream list also sends
+        // 8.8.8.8 direct, where Iranian ISPs answer blocked sites with poisoned IPs.
+        var templateContent = isIran
+            ? EmbedUtils.GetEmbedText(Global.NamespaceSample + "prosys_ir_template")
+            : await downloadHandle.TryDownloadString(config.ConstItem.RouteRulesTemplateSourceUrl);
         if (templateContent.IsNullOrEmpty())
         {
             return await InitBuiltinRouting(config, blImportAdvancedRules); // fallback
@@ -2703,19 +2713,10 @@ public static class ConfigHandler
                 continue;
             }
 
-            var ruleSetsString = !item.RuleSet.IsNullOrEmpty()
+            var embedded = isIran ? ProSySIranRuleSet(item.Url) : null;
+            var ruleSetsString = embedded ?? (!item.RuleSet.IsNullOrEmpty()
                 ? item.RuleSet
-                : await downloadHandle.TryDownloadString(item.Url);
-            if (ruleSetsString.IsNullOrEmpty() && isIran && item.Url.IsNotEmpty())
-            {
-                var embedded = item.Url.EndsWith("all_except_ir.json", StringComparison.OrdinalIgnoreCase) ? "prosys_ir_except"
-                    : item.Url.EndsWith("all.json", StringComparison.OrdinalIgnoreCase) ? "prosys_ir_all"
-                    : null;
-                if (embedded != null)
-                {
-                    ruleSetsString = EmbedUtils.GetEmbedText(Global.NamespaceSample + embedded);
-                }
-            }
+                : await downloadHandle.TryDownloadString(item.Url));
 
             if (ruleSetsString.IsNullOrEmpty())
             {
@@ -2737,6 +2738,16 @@ public static class ConfigHandler
         }
 
         return 0;
+    }
+
+    /// <summary>ProSyS: bundled Iran rule set for a template entry (by its upstream file name), or null.</summary>
+    public static string? ProSySIranRuleSet(string? url)
+    {
+        var name = url.IsNullOrEmpty() ? null
+            : url.EndsWith("all_except_ir.json", StringComparison.OrdinalIgnoreCase) ? "prosys_ir_except"
+            : url.EndsWith("all.json", StringComparison.OrdinalIgnoreCase) ? "prosys_ir_all"
+            : null;
+        return name == null ? null : EmbedUtils.GetEmbedText(Global.NamespaceSample + name);
     }
 
     /// <summary>
@@ -3080,21 +3091,22 @@ public static class ConfigHandler
                 config.ConstItem.SrsSourceUrl = Global.SingboxRulesetSources[2];
                 config.ConstItem.RouteRulesTemplateSourceUrl = Global.RoutingRulesSources[2];
 
-                // ProSyS: keep the built-in DNS. The Iran repo no longer ships simple_dns.json (404), and the fallback
-                // enabled its full v2ray.json DNS object, which this build splits as a server list, so Xray refused to start.
-                var simpleDnsIran = await GetExternalSimpleDNSItem(Global.DNSTemplateSources[2] + "simple_dns.json");
-                config.SimpleDNSItem = IsUsableSimpleDns(simpleDnsIran) ? simpleDnsIran! : InitBuiltinSimpleDNS();
+                // ProSyS: keep the simple DNS (the Iran repo's v2ray.json DNS object made Xray refuse to start),
+                // but resolve Iranian domains with an Iranian resolver instead of the mainland-China default.
+                config.SimpleDNSItem = InitProSySIranSimpleDNS();
                 break;
         }
 
         return true;
     }
 
-    private static bool IsUsableSimpleDns(SimpleDNSItem? item)
+    /// <summary>ProSyS: built-in simple DNS with Iranian direct/bootstrap resolvers; remote DNS stays DoH via the proxy.</summary>
+    public static SimpleDNSItem InitProSySIranSimpleDNS()
     {
-        static bool Plain(string? value) => value.IsNullOrEmpty() || (!value.Contains('{') && !value.Contains('\n'));
-        return item != null && item.DirectDNS.IsNotEmpty() && item.RemoteDNS.IsNotEmpty()
-            && Plain(item.DirectDNS) && Plain(item.RemoteDNS) && Plain(item.BootstrapDNS);
+        var item = InitBuiltinSimpleDNS();
+        item.DirectDNS = Global.ProSySIranDirectDNS;
+        item.BootstrapDNS = Global.ProSySIranBootstrapDNS;
+        return item;
     }
 
     #endregion Regional Presets
