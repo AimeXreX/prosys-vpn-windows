@@ -55,7 +55,7 @@ jobs:
           notes="src/prosys/release-notes/${GITHUB_REF_NAME}.md"
           if [ -f "$notes" ]; then cp "$notes" release-notes.md; else echo "ProSyS VPN for Windows ${GITHUB_REF_NAME}" > release-notes.md; fi
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/*
           body_path: release-notes.md
