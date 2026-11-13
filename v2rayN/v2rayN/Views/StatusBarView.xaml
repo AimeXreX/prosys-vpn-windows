@@ -111,7 +111,14 @@
             NoLeftClickDelay="True"
             ToolTipText="v2rayN">
             <tb:TaskbarIcon.ContextMenu>
-                <ContextMenu Style="{StaticResource DefContextMenu}">
+                <ContextMenu x:Name="trayMenu" Style="{StaticResource DefContextMenu}">
+                    <!--  ProSyS: one-click connect / disconnect from the tray  -->
+                    <MenuItem
+                        x:Name="menuProSySConnect"
+                        Height="{StaticResource MenuItemHeight}"
+                        FontWeight="Bold"
+                        Header="اتصال سریع" />
+                    <Separator />
                     <MenuItem
                         x:Name="menuSystemProxyClear"
                         Height="{StaticResource MenuItemHeight}"
@@ -226,6 +233,11 @@
                         x:Name="menuCopyProxyCmdToClipboard"
                         Height="{StaticResource MenuItemHeight}"
                         Header="{x:Static resx:ResUI.menuCopyProxyCmdToClipboard}" />
+                    <Separator />
+                    <MenuItem
+                        x:Name="menuProSySReport"
+                        Height="{StaticResource MenuItemHeight}"
+                        Header="ساخت گزارش مشکل" />
                     <Separator />
                     <MenuItem
                         x:Name="menuExit"

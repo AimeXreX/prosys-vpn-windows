@@ -29,6 +29,10 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Tests (routing, DNS, subscription info, config generation)
+        if: matrix.arch == 'x64'
+        run: dotnet run --project v2rayN/ServiceLib.Tests -c Release
+
       - name: Package (zip + Setup)
         run: prosys/package-windows.sh ${{ matrix.arch }} "$GITHUB_WORKSPACE/dist"
 

@@ -11,6 +11,13 @@
     TextOptions.TextRenderingMode="ClearType">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <Style x:Key="PsHideEmpty" TargetType="TextBlock">
+            <Style.Triggers>
+                <Trigger Property="Text" Value="">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
 
         <!--  Slow idle rotation of the portal rings (site: miniSpin 12s linear infinite)  -->
         <Storyboard x:Key="SbIdle" RepeatBehavior="Forever">
@@ -186,6 +193,30 @@
                             Command="{Binding OpenChannelCmd}"
                             Content="کانال تلگرام"
                             Style="{StaticResource PsQuietButton}" />
+                        <Button
+                            Margin="8,0,0,0"
+                            Command="{Binding OpenAddSubCmd}"
+                            Style="{StaticResource PsQuietButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    Width="16"
+                                    Height="16"
+                                    VerticalAlignment="Center"
+                                    Kind="PlaylistPlus" />
+                                <TextBlock Margin="6,0,0,0" Text="افزودن اشتراک" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            Margin="8,0,0,0"
+                            Command="{Binding OpenSettingsCmd}"
+                            Style="{StaticResource PsQuietButton}"
+                            ToolTip="تنظیمات سریع: حالت گیمینگ، ضدفیلتر، اعلان‌ها، برنامه‌های خارج از VPN">
+                            <materialDesign:PackIcon
+                                Width="16"
+                                Height="16"
+                                VerticalAlignment="Center"
+                                Kind="CogOutline" />
+                        </Button>
                         <Button
                             Margin="8,0,0,0"
                             Command="{Binding ShowAdvancedCmd}"
@@ -590,6 +621,37 @@
                                     Foreground="{StaticResource PsMint}"
                                     Text="{Binding ServerPing}"
                                     Visibility="{Binding HasServerPing, Converter={StaticResource BoolToVis}}" />
+                                <DockPanel Margin="0,6,0,0" Visibility="{Binding HasSubInfo, Converter={StaticResource BoolToVis}}">
+                                    <Button
+                                        Command="{Binding RenewCmd}"
+                                        Content="تمدید"
+                                        DockPanel.Dock="Right"
+                                        Padding="10,3"
+                                        Style="{StaticResource PsGhostButton}"
+                                        Visibility="{Binding IsSubEnding, Converter={StaticResource BoolToVis}}" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Text="{Binding SubInfoText}"
+                                        TextWrapping="Wrap">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{StaticResource PsMuted}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSubEnding}" Value="True">
+                                                        <Setter Property="Foreground" Value="{StaticResource PsDanger}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DockPanel>
+                                <TextBlock
+                                    Margin="0,4,0,0"
+                                    FontSize="11"
+                                    Foreground="{StaticResource PsMuted}"
+                                    Style="{StaticResource PsHideEmpty}"
+                                    Text="{Binding UsageText}" />
                                 <UniformGrid Margin="0,14,0,0" Columns="2">
                                     <StackPanel>
                                         <TextBlock FontSize="11" Foreground="{StaticResource PsMuted}" Text="دانلود" />
@@ -620,9 +682,46 @@
                 </ScrollViewer>
             </Grid>
 
-            <!--  Footer: errors / notice  -->
+            <!--  Footer: app update / errors  -->
+            <StackPanel Grid.Row="2">
             <Border
-                Grid.Row="2"
+                Margin="0,14,0,0"
+                Padding="14,10"
+                Background="#14B8FF4D"
+                BorderBrush="#55B8FF4D"
+                BorderThickness="1"
+                CornerRadius="14"
+                Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVis}}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button
+                            Command="{Binding UpdateCmd}"
+                            Content="به‌روزرسانی"
+                            Padding="14,6"
+                            Style="{StaticResource PsPrimaryButton}" />
+                        <Button
+                            Margin="8,0,0,0"
+                            Command="{Binding SkipUpdateCmd}"
+                            Content="بعداً"
+                            Padding="10,6"
+                            Style="{StaticResource PsQuietButton}" />
+                    </StackPanel>
+                    <materialDesign:PackIcon
+                        Width="18"
+                        Height="18"
+                        VerticalAlignment="Center"
+                        Foreground="{StaticResource PsAcid}"
+                        Kind="Download" />
+                    <TextBlock
+                        Margin="10,0,0,0"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{StaticResource PsInk}"
+                        Text="{Binding UpdateText}"
+                        TextWrapping="Wrap" />
+                </DockPanel>
+            </Border>
+            <Border
                 Margin="0,14,0,0"
                 Padding="14,10"
                 Background="#14FF716B"
@@ -645,10 +744,24 @@
                         TextWrapping="Wrap" />
                 </DockPanel>
             </Border>
+            </StackPanel>
         </Grid>
         <!--  Quick connect: which subscription should be pinged?  -->
         <Grid Visibility="{Binding IsPickerOpen, Converter={StaticResource BoolToVis}}">
             <Border Background="#C8050806" MouseLeftButtonDown="OnPickerBackdropClick" />
+            <!--  Shadow lives on its own layer: an Effect on the card itself re-renders its text as a blurry bitmap.  -->
+            <Border
+                Width="470"
+                MaxHeight="560"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="#0B100C"
+                CornerRadius="24"
+                IsHitTestVisible="False">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="60" Opacity="0.55" ShadowDepth="0" Color="#000000" />
+                </Border.Effect>
+            </Border>
             <Border
                 Width="470"
                 MaxHeight="560"
@@ -658,10 +771,8 @@
                 Background="{StaticResource PsHeroGradient}"
                 BorderBrush="#40B8FF4D"
                 BorderThickness="1"
-                CornerRadius="24">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="60" Opacity="0.55" ShadowDepth="0" Color="#000000" />
-                </Border.Effect>
+                CornerRadius="24"
+                TextOptions.TextFormattingMode="Display">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top">
                         <DockPanel>
@@ -708,7 +819,10 @@
                                         HorizontalContentAlignment="Stretch"
                                         Command="{Binding PickCmd}"
                                         Cursor="Hand"
-                                        IsEnabled="{Binding IsEnabled}">
+                                        FontFamily="{StaticResource PsFont}"
+                                        Foreground="{StaticResource PsInk}"
+                                        IsEnabled="{Binding IsEnabled}"
+                                        Style="{x:Null}">
                                         <Button.Template>
                                             <ControlTemplate TargetType="Button">
                                                 <Border
@@ -729,6 +843,7 @@
                                                             <TextBlock
                                                                 FontSize="14"
                                                                 FontWeight="Bold"
+                                                                Foreground="{StaticResource PsInk}"
                                                                 Text="{Binding Title}"
                                                                 TextTrimming="CharacterEllipsis" />
                                                             <TextBlock
@@ -759,6 +874,245 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+        <Grid Visibility="{Binding IsAddSubOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="#C8050806" MouseLeftButtonDown="OnOverlayBackdropClick" />
+            <Border
+                Width="470"
+                MaxHeight="580"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="#0B100C"
+                CornerRadius="24"
+                IsHitTestVisible="False">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="60" Opacity="0.55" ShadowDepth="0" Color="#000000" />
+                </Border.Effect>
+            </Border>
+            <Border
+                Width="470"
+                MaxHeight="580"
+                Padding="24,22"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="{StaticResource PsHeroGradient}"
+                BorderBrush="#40B8FF4D"
+                BorderThickness="1"
+                CornerRadius="24"
+                TextOptions.TextFormattingMode="Display">
+                <DockPanel>
+                    <DockPanel Margin="0,0,0,14" DockPanel.Dock="Top">
+                        <materialDesign:PackIcon
+                            Width="22"
+                            Height="22"
+                            VerticalAlignment="Center"
+                            Foreground="{StaticResource PsAcid}"
+                            Kind="PlaylistPlus" />
+                        <TextBlock
+                            Margin="10,0,0,0"
+                            VerticalAlignment="Center"
+                            FontSize="19"
+                            FontWeight="Black"
+                            Text="افزودن اشتراک یا کانفیگ" />
+                    </DockPanel>
+                    <StackPanel>
+                        <TextBlock
+                            FontSize="12"
+                            Foreground="{StaticResource PsMuted}"
+                            Text="لینک subscription (https://…) یا یک یا چند کانفیگ مثل vless:// را وارد کنید. اشتراک بلافاصله به‌روز می‌شود."
+                            TextWrapping="Wrap" />
+                        <TextBox
+                            Height="110"
+                            Margin="0,12,0,0"
+                            Padding="10"
+                            AcceptsReturn="True"
+                            Background="#0DFFFFFF"
+                            BorderBrush="#30B8FF4D"
+                            CaretBrush="{StaticResource PsAcid}"
+                            FlowDirection="LeftToRight"
+                            FontFamily="Consolas"
+                            FontSize="12"
+                            Foreground="{StaticResource PsInk}"
+                            Text="{Binding AddSubText, UpdateSourceTrigger=PropertyChanged}"
+                            TextWrapping="Wrap"
+                            VerticalScrollBarVisibility="Auto" />
+                        <TextBlock
+                            Margin="0,8,0,0"
+                            FontSize="12"
+                            Foreground="#FFC9C6"
+                            Style="{StaticResource PsHideEmpty}"
+                            Text="{Binding AddSubMessage}"
+                            TextWrapping="Wrap" />
+                        <UniformGrid Margin="0,14,0,0" Columns="2">
+                            <Button
+                                Margin="0,0,5,0"
+                                Command="{Binding AddSubCmd}"
+                                Content="افزودن"
+                                Style="{StaticResource PsPrimaryButton}" />
+                            <Button
+                                Margin="5,0,0,0"
+                                Command="{Binding CloseOverlaysCmd}"
+                                Content="انصراف"
+                                Style="{StaticResource PsGhostButton}" />
+                        </UniformGrid>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </Grid>
+        <Grid Visibility="{Binding IsSettingsOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="#C8050806" MouseLeftButtonDown="OnOverlayBackdropClick" />
+            <Border
+                Width="480"
+                MaxHeight="580"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="#0B100C"
+                CornerRadius="24"
+                IsHitTestVisible="False">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="60" Opacity="0.55" ShadowDepth="0" Color="#000000" />
+                </Border.Effect>
+            </Border>
+            <Border
+                Width="480"
+                MaxHeight="580"
+                Padding="24,22"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="{StaticResource PsHeroGradient}"
+                BorderBrush="#40B8FF4D"
+                BorderThickness="1"
+                CornerRadius="24"
+                TextOptions.TextFormattingMode="Display">
+                <DockPanel>
+                    <DockPanel Margin="0,0,0,14" DockPanel.Dock="Top">
+                        <materialDesign:PackIcon
+                            Width="22"
+                            Height="22"
+                            VerticalAlignment="Center"
+                            Foreground="{StaticResource PsAcid}"
+                            Kind="CogOutline" />
+                        <TextBlock
+                            Margin="10,0,0,0"
+                            VerticalAlignment="Center"
+                            FontSize="19"
+                            FontWeight="Black"
+                            Text="تنظیمات سریع" />
+                    </DockPanel>
+                    <Button
+                        Margin="0,14,0,0"
+                        Command="{Binding CloseOverlaysCmd}"
+                        Content="بستن"
+                        DockPanel.Dock="Bottom"
+                        Style="{StaticResource PsGhostButton}" />
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <CheckBox
+                                Margin="0,0,0,14"
+                                IsChecked="{Binding GamingMode}"
+                                Style="{StaticResource PsSwitch}">
+                                <StackPanel>
+                                    <TextBlock FontSize="13" FontWeight="Bold" Foreground="{StaticResource PsInk}" Text="حالت گیمینگ" />
+                                    <TextBlock
+                                        MaxWidth="340"
+                                        FontSize="11"
+                                        Foreground="{StaticResource PsMuted}"
+                                        Text="کل سیستم از VPN (TUN) و هنگام اتصال، سرورهای مخصوص UDP مثل WireGuard، Hysteria2 و TUIC (اگر در اشتراک باشند) اول تست می‌شوند."
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </CheckBox>
+                            <CheckBox
+                                Margin="0,0,0,14"
+                                IsChecked="{Binding Fragment}"
+                                Style="{StaticResource PsSwitch}">
+                                <StackPanel>
+                                    <TextBlock FontSize="13" FontWeight="Bold" Foreground="{StaticResource PsInk}" Text="ضدفیلتر (Fragment)" />
+                                    <TextBlock
+                                        MaxWidth="340"
+                                        FontSize="11"
+                                        Foreground="{StaticResource PsMuted}"
+                                        Text="برای شبکه‌های سخت‌گیر. اگر هیچ سروری جواب ندهد، خودکار امتحان می‌شود."
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </CheckBox>
+                            <CheckBox
+                                Margin="0,0,0,14"
+                                IsChecked="{Binding Notifications}"
+                                Style="{StaticResource PsSwitch}">
+                                <StackPanel>
+                                    <TextBlock FontSize="13" FontWeight="Bold" Foreground="{StaticResource PsInk}" Text="اعلان‌های ویندوز" />
+                                    <TextBlock
+                                        MaxWidth="340"
+                                        FontSize="11"
+                                        Foreground="{StaticResource PsMuted}"
+                                        Text="اتمام حجم، انقضای اشتراک، قطع یا جابه‌جایی اتصال و نسخهٔ جدید."
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </CheckBox>
+                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="{StaticResource PsInk}" Text="برنامه‌های خارج از VPN" />
+                            <TextBlock
+                                Margin="0,2,0,8"
+                                FontSize="11"
+                                Foreground="{StaticResource PsMuted}"
+                                Text="در حالت کامل (TUN) این برنامه‌ها مستقیم و بدون VPN به اینترنت وصل می‌شوند."
+                                TextWrapping="Wrap" />
+                            <ItemsControl ItemsSource="{Binding DirectApps}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            Margin="0,0,0,6"
+                                            Padding="12,6"
+                                            Background="#0AFFFFFF"
+                                            BorderBrush="#14FFFFFF"
+                                            BorderThickness="1"
+                                            CornerRadius="10">
+                                            <DockPanel>
+                                                <Button
+                                                    Command="{Binding RemoveCmd}"
+                                                    DockPanel.Dock="Right"
+                                                    Padding="6,2"
+                                                    Style="{StaticResource PsQuietButton}"
+                                                    ToolTip="حذف">
+                                                    <materialDesign:PackIcon Width="14" Height="14" Kind="Close" />
+                                                </Button>
+                                                <TextBlock
+                                                    VerticalAlignment="Center"
+                                                    FlowDirection="LeftToRight"
+                                                    FontSize="12"
+                                                    Foreground="{StaticResource PsInk}"
+                                                    Text="{Binding Name}"
+                                                    TextTrimming="CharacterEllipsis"
+                                                    ToolTip="{Binding Path}" />
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Button
+                                HorizontalAlignment="Left"
+                                Command="{Binding AddDirectAppCmd}"
+                                Padding="12,6"
+                                Style="{StaticResource PsQuietButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Width="14" Height="14" VerticalAlignment="Center" Kind="Plus" />
+                                    <TextBlock Margin="6,0,0,0" FontSize="12" Text="افزودن برنامه…" />
+                                </StackPanel>
+                            </Button>
+                            <Button
+                                Margin="0,16,0,0"
+                                HorizontalAlignment="Left"
+                                Command="{Binding ReportCmd}"
+                                Padding="12,6"
+                                Style="{StaticResource PsQuietButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Width="14" Height="14" VerticalAlignment="Center" Kind="BugOutline" />
+                                    <TextBlock Margin="6,0,0,0" FontSize="12" Text="ساخت گزارش مشکل (بدون رمزها)" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
                     </ScrollViewer>
                 </DockPanel>
             </Border>

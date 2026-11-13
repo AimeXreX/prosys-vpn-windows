@@ -11,6 +11,9 @@ public class DownloadService : IDisposable
 
     public bool DisposeHandler { get; init; } = false;
 
+    /// <summary>ProSyS: "subscription-userinfo" header of the last successful string download (traffic / expiry).</summary>
+    public string? LastSubscriptionUserInfo { get; private set; }
+
     public DownloaderHelper DownloaderHelper
     {
         get
@@ -293,7 +296,12 @@ public class DownloadService : IDisposable
             timeoutCts.CancelAfter(Global.ProxyFetch);
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-            return await client.GetStringAsync(url, linkedCts.Token);
+            using var response = await client.GetAsync(url, linkedCts.Token);
+            response.EnsureSuccessStatusCode();
+            LastSubscriptionUserInfo = response.Headers.TryGetValues("subscription-userinfo", out var values)
+                ? values.FirstOrDefault()
+                : null;
+            return await response.Content.ReadAsStringAsync(linkedCts.Token);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

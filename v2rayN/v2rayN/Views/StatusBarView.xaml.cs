@@ -77,6 +77,19 @@ public partial class StatusBarView
         });
 
         _ = RefreshIcon();
+
+        // ProSyS: tray quick actions and Windows notifications.
+        ProSyS.ProSySNotifier.Sink = (title, message) => tbNotify.ShowNotification(title, message);
+        trayMenu.Opened += (_, _) =>
+            menuProSySConnect.Header = v2rayN.ViewModels.ProSySHomeViewModel.Instance?.IsConnected == true ? "قطع اتصال" : "اتصال سریع";
+        menuProSySConnect.Click += (_, _) => v2rayN.ViewModels.ProSySHomeViewModel.Instance?.TrayToggleConnect();
+        menuProSySReport.Click += (_, _) =>
+        {
+            if (v2rayN.ViewModels.ProSySHomeViewModel.Instance?.ReportCmd.CanExecute(null) == true)
+            {
+                v2rayN.ViewModels.ProSySHomeViewModel.Instance.ReportCmd.Execute(null);
+            }
+        };
     }
 
     private async Task RefreshIcon()

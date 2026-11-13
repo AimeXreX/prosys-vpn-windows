@@ -257,6 +257,19 @@ public partial class CoreConfigSingboxService
                 _coreConfig.route.rules.Add(resolveRule);
             }
 
+            // ProSyS: programs the user chose to keep outside the tunnel (TUN mode only; sing-box matches processes).
+            var directApps = _config.UiItem.ProSySDirectApps?.Where(a => a.IsNotEmpty()).Distinct().ToList();
+            if (directApps is { Count: > 0 })
+            {
+                GenRoutingUserRule(new RulesItem
+                {
+                    Id = "prosys-direct-apps",
+                    Enabled = true,
+                    OutboundTag = Global.DirectTag,
+                    Process = directApps,
+                });
+            }
+
             var ipRules = new List<RulesItem>();
             if (routing != null)
             {

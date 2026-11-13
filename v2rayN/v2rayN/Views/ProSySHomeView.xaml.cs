@@ -53,6 +53,14 @@ public partial class ProSySHomeView : UserControl
         }
     }
 
+    private void OnOverlayBackdropClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (DataContext is ProSySHomeViewModel vm && vm.CloseOverlaysCmd.CanExecute(null))
+        {
+            vm.CloseOverlaysCmd.Execute(null);
+        }
+    }
+
     private void Toggle(Storyboard storyboard, bool on)
     {
         if (on)

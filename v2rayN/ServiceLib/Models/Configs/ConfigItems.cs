@@ -90,6 +90,21 @@ public class UIItem
     public string? ProSySQuickSource { get; set; }
     public bool ProSySQuickRemember { get; set; }
 
+    /// <summary>Programs (exe names or full paths) that bypass the tunnel in TUN mode.</summary>
+    public List<string>? ProSySDirectApps { get; set; }
+
+    /// <summary>Gaming mode: TUN on and quick connect prefers UDP-native protocols (WireGuard, Hysteria2, TUIC).</summary>
+    public bool ProSySGamingMode { get; set; }
+
+    /// <summary>Windows notifications: null = not asked yet.</summary>
+    public bool? ProSySNotifications { get; set; }
+
+    /// <summary>Fragment was switched on by ProSyS because nothing answered without it.</summary>
+    public bool ProSySAutoFragment { get; set; }
+
+    /// <summary>Release tag the user chose to skip in the update banner.</summary>
+    public string? ProSySSkippedVersion { get; set; }
+
     public bool EnableAutoAdjustMainLvColWidth { get; set; }
     public int MainGirdHeight1 { get; set; }
     public int MainGirdHeight2 { get; set; }

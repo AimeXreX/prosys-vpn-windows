@@ -187,6 +187,12 @@ public class SubscriptionHandler(
                 var result = await downloadService.TryDownloadString(url);
                 if (!result.IsNullOrEmpty())
                 {
+                    // ProSyS: remember the panel's traffic / expiry for the home screen (main link only).
+                    if (url == Utils.GetPunycode(_item.Url.TrimEx())
+                        && ProSySUtils.ParseSubscriptionUserInfo(downloadService.LastSubscriptionUserInfo) is { } info)
+                    {
+                        ProSySSubInfoStore.Set(_item.Id, info);
+                    }
                     return result;
                 }
             }

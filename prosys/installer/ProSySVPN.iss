@@ -109,6 +109,8 @@ Filename: "{app}\guiConfigs\prosys-setup.ini"; Section: "setup"; Key: "autorun";
 [Run]
 ; shellexec: the exe requires Administrator, so CreateProcess would fail with error 740.
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchApp}"; Flags: nowait postinstall skipifsilent shellexec
+; In-app update (the app runs this Setup with /SILENT /prosysupdate=1): start the new version when done.
+Filename: "{app}\{#AppExe}"; Flags: nowait shellexec; Check: IsUpdateMode
 
 [UninstallRun]
 ; The elevated app stops itself and its cores and removes its start-with-Windows task (one UAC prompt).
@@ -129,6 +131,11 @@ Type: dirifempty; Name: "{app}"
 [Code]
 const
   ReleasesUrl = 'https://github.com/AimeXreX/prosys-vpn-windows/releases/latest';
+
+function IsUpdateMode: Boolean;
+begin
+  Result := ExpandConstant('{param:prosysupdate|0}') = '1';
+end;
 
 function IsArm64Setup: Boolean;
 begin

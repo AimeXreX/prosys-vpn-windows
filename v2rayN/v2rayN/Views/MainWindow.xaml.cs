@@ -37,6 +37,11 @@ public partial class MainWindow
         // ProSyS home screen (default) and classic v2rayN interface ("advanced mode").
         var home = new ProSySHomeViewModel();
         home.AdvancedRequested += () => ShowAdvanced(true);
+        home.ShowWindowRequested += () => Dispatcher.BeginInvoke(() =>
+        {
+            ShowHideWindow(true);
+            ShowAdvanced(false);
+        });
         homeView.DataContext = home;
         btnProSySHome.Click += (_, _) => ShowAdvanced(false);
         ShowAdvanced(_config.UiItem.ProSySAdvanced);

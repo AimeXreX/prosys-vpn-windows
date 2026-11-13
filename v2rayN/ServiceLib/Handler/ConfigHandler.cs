@@ -2300,7 +2300,8 @@ public static class ConfigHandler
         }
 
         var queryVars = Utils.ParseQueryString(uri.Query);
-        subItem.Remarks = queryVars["remarks"] ?? "import_sub";
+        // ProSyS: name it after its host instead of the generic "import_sub", so several subscriptions are distinguishable.
+        subItem.Remarks = queryVars["remarks"] ?? (uri.IdnHost.IsNotEmpty() ? uri.IdnHost : "import_sub");
 
         return await AddSubItem(config, subItem);
     }

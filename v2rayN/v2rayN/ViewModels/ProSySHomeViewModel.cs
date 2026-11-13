@@ -57,7 +57,7 @@ public sealed class ProSySQuickSource
 }
 
 /// <summary>State of the gaming-style home screen: big connect orb, daily quota, live speed and purchase links.</summary>
-public sealed class ProSySHomeViewModel : INotifyPropertyChanged
+public sealed partial class ProSySHomeViewModel : INotifyPropertyChanged
 {
     private readonly Config _config;
     private readonly DispatcherTimer _fastTimer;
@@ -91,12 +91,17 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
             return Task.CompletedTask;
         });
         _rememberSource = _config.UiItem.ProSySQuickRemember;
+        InitExtras();
 
         ProSySFreeManager.Instance.StatusChanged += () => Application.Current?.Dispatcher.BeginInvoke(ApplyFreeStatus);
 
         AppEvents.DispatcherStatisticsRequested
             .AsObservable()
-            .Subscribe(item => Application.Current?.Dispatcher.BeginInvoke(() => ApplySpeed(item)));
+            .Subscribe(item =>
+            {
+                TrackUsage(item);
+                Application.Current?.Dispatcher.BeginInvoke(() => ApplySpeed(item));
+            });
 
         _fastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _fastTimer.Tick += async (_, _) => await RefreshLocalStateAsync();
@@ -252,6 +257,12 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
             }
         }
 
+        // Gaming mode always runs the whole system through the tunnel.
+        if (GamingMode && !TunEnabled)
+        {
+            TunEnabled = true;
+        }
+
         IsBusy = true;
         try
         {
@@ -280,6 +291,8 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
             ErrorText = string.Empty;
             AppEvents.SysProxyChangeRequested.Publish(ESysProxyType.ForcedChange);
             await Task.Delay(600);
+            ProSySNotifier.Reset("tunnel-down");
+            _ = Application.Current?.Dispatcher.BeginInvoke(AskNotificationsOnce, DispatcherPriority.Background);
         }
         finally
         {
@@ -329,10 +342,11 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
                 continue;
             }
             var free = sub.Id == Global.ProSySManagedSubId;
+            var info = free ? null : DescribeSubInfo(ProSySSubInfoStore.Get(sub.Id));
             var subtitle = free
                 ? exhausted ? "حجم رایگان امروز تمام شده است" : $"سرویس رایگان روزانه · {ToFa(count.ToString(CultureInfo.InvariantCulture))} سرور"
-                : $"{ToFa(count.ToString(CultureInfo.InvariantCulture))} سرور";
-            list.Add(Make(sub.Id, free ? "ProSyS رایگان (۵۰۰ مگ روزانه)" : CleanName(sub.Remarks.IsNotEmpty() ? sub.Remarks : "اشتراک"),
+                : $"{ToFa(count.ToString(CultureInfo.InvariantCulture))} سرور{(info != null ? " · " + info : string.Empty)}";
+            list.Add(Make(sub.Id, free ? "ProSyS رایگان (۵۰۰ مگ روزانه)" : SubTitle(sub),
                 subtitle, free ? "Gift" : "CloudOutline", !(free && exhausted)));
         }
 
@@ -349,11 +363,23 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
         return list;
     }
 
+    /// <summary>Subscription name; the generic "import_sub" of clipboard imports is replaced by the link's host.</summary>
+    private static string SubTitle(SubItem sub)
+    {
+        var name = sub.Remarks?.Trim();
+        if (name.IsNullOrEmpty() || name == "import_sub")
+        {
+            name = Utils.TryUri(sub.Url)?.Host ?? "اشتراک";
+        }
+        return CleanName(name!);
+    }
+
     private async Task<string?> AskSourceAsync(List<ProSySQuickSource> sources)
     {
         _picker?.TrySetResult(null);
         _picker = new TaskCompletionSource<string?>();
         QuickSources = sources;
+        ShowWindowRequested?.Invoke();
         IsPickerOpen = true;
         var choice = await _picker.Task;
         if (choice != null)
@@ -420,7 +446,23 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
 
         ErrorText = string.Empty;
         ServerPing = $"در حال گرفتن پینگ {ToFa(profiles.Count.ToString(CultureInfo.InvariantCulture))} سرور از «{title}»…";
-        var best = await ProSySFreeManager.Instance.SelectFastestAsync(_config, profiles, title);
+        var best = await TestFastestAsync(profiles, title);
+        if (best == null && !_config.CoreBasicItem.EnableFragment)
+        {
+            // Heavy filtering often kills the TLS handshake itself: retry once with TLS fragmentation.
+            ServerPing = "هیچ سروری جواب نداد؛ تلاش دوباره با حالت ضدفیلتر (Fragment)…";
+            await ApplyFragmentAsync(true, auto: true);
+            best = await TestFastestAsync(profiles, title);
+            if (best == null)
+            {
+                await ApplyFragmentAsync(false, auto: true);
+            }
+            else
+            {
+                ShowNotice("حالت ضدفیلتر (Fragment) خودکار روشن شد؛ از تنظیمات سریع می‌توانید خاموشش کنید.");
+                AppEvents.ProSySProfilesChanged.Publish();
+            }
+        }
         if (best == null)
         {
             ErrorText = $"هیچ‌کدام از سرورهای «{title}» پاسخ ندادند. منبع دیگری را انتخاب یا اشتراک را به‌روزرسانی کنید.";
@@ -432,6 +474,21 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
         await RefreshLocalStateAsync();
         ApplyFreeStatus();
         return true;
+    }
+
+    /// <summary>In gaming mode, UDP-native servers (WireGuard, Hysteria2, TUIC) are tried first.</summary>
+    private async Task<ProfileItem?> TestFastestAsync(List<ProfileItem> profiles, string title)
+    {
+        if (GamingMode)
+        {
+            var udp = profiles.Where(p => ProSySUtils.IsUdpNative(p.ConfigType)).ToList();
+            if (udp.Count > 0 && udp.Count < profiles.Count
+                && await ProSySFreeManager.Instance.SelectFastestAsync(_config, udp, $"{title} · گیمینگ") is { } gaming)
+            {
+                return gaming;
+            }
+        }
+        return await ProSySFreeManager.Instance.SelectFastestAsync(_config, profiles, title);
     }
 
     #endregion Quick connect source
@@ -492,6 +549,7 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
             ServerName = "در حال آماده‌سازی سرور رایگان…";
         }
 
+        UpdateSubInfo(server);
         UpdateResetText();
     }
 
@@ -518,6 +576,7 @@ public sealed class ProSySHomeViewModel : INotifyPropertyChanged
         RemainingText = FormatBytes(status.RemainingBytes);
         QuotaText = $"باقی‌مانده از {FormatBytes(quota)} امروز";
         IsExhausted = status.Exhausted;
+        NotifyExhausted(status.Exhausted);
         UpdateResetText();
 
         // Out of free quota while browsing on the free server: stop routing traffic into a dead tunnel.
