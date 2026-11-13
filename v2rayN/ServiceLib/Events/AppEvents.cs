@@ -14,4 +14,7 @@ public static class AppEvents
     public static readonly EventChannel<bool> ShutdownRequested = new();
 
     public static readonly EventChannel<ESysProxyType> SysProxyChangeRequested = new();
+
+    /// <summary>ProSyS: managed free profiles changed; refresh the server list and reload the core.</summary>
+    public static readonly EventChannel<RxVoid> ProSySProfilesChanged = new();
 }

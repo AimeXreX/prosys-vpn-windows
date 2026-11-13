@@ -1,0 +1,625 @@
+<UserControl
+    x:Class="v2rayN.Views.ProSySHomeView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+    Background="{StaticResource PsBg}"
+    FlowDirection="RightToLeft"
+    FontFamily="{StaticResource PsFont}"
+    Foreground="{StaticResource PsInk}"
+    TextOptions.TextFormattingMode="Ideal"
+    TextOptions.TextRenderingMode="ClearType">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+        <!--  Slow idle rotation of the portal rings (site: miniSpin 12s linear infinite)  -->
+        <Storyboard x:Key="SbIdle" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="ringOuterRot" Storyboard.TargetProperty="Angle" From="0" To="360" Duration="0:0:12" />
+            <DoubleAnimation Storyboard.TargetName="ringDashRot" Storyboard.TargetProperty="Angle" From="360" To="0" Duration="0:0:12" />
+            <DoubleAnimation Storyboard.TargetName="arcRot" Storyboard.TargetProperty="Angle" From="25" To="385" Duration="0:0:6" />
+        </Storyboard>
+
+        <!--  Breathing glow while connected  -->
+        <Storyboard x:Key="SbConnected" RepeatBehavior="Forever" AutoReverse="True">
+            <DoubleAnimation Storyboard.TargetName="orbGlow" Storyboard.TargetProperty="BlurRadius" From="45" To="85" Duration="0:0:1.8">
+                <DoubleAnimation.EasingFunction>
+                    <SineEase EasingMode="EaseInOut" />
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="orbGlow" Storyboard.TargetProperty="Opacity" From="0.45" To="0.85" Duration="0:0:1.8" />
+            <DoubleAnimation Storyboard.TargetName="pulseRing" Storyboard.TargetProperty="Opacity" From="0.0" To="0.55" Duration="0:0:1.8" />
+            <DoubleAnimation Storyboard.TargetName="pulseScale" Storyboard.TargetProperty="ScaleX" From="0.92" To="1.06" Duration="0:0:1.8" />
+            <DoubleAnimation Storyboard.TargetName="pulseScale" Storyboard.TargetProperty="ScaleY" From="0.92" To="1.06" Duration="0:0:1.8" />
+        </Storyboard>
+
+        <!--  Fast scan while connecting  -->
+        <Storyboard x:Key="SbBusy" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="scanRot" Storyboard.TargetProperty="Angle" From="0" To="360" Duration="0:0:0.9" />
+        </Storyboard>
+
+        <!--  Entrance: cards rise and fade in, staggered  -->
+        <Storyboard x:Key="SbEnter">
+            <DoubleAnimation Storyboard.TargetName="hero" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.45" />
+            <DoubleAnimation Storyboard.TargetName="heroShift" Storyboard.TargetProperty="Y" From="24" To="0" Duration="0:0:0.55">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut" />
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation BeginTime="0:0:0.12" Storyboard.TargetName="side" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.45" />
+            <DoubleAnimation BeginTime="0:0:0.12" Storyboard.TargetName="sideShift" Storyboard.TargetProperty="Y" From="30" To="0" Duration="0:0:0.6">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut" />
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+    </UserControl.Resources>
+
+    <UserControl.Triggers>
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard Storyboard="{StaticResource SbIdle}" />
+            <BeginStoryboard Storyboard="{StaticResource SbEnter}" />
+        </EventTrigger>
+    </UserControl.Triggers>
+
+    <Grid>
+        <!--  Ambient background: two soft acid/mint glows + faint scanlines (site .ambient / .noise)  -->
+        <Canvas IsHitTestVisible="False">
+            <Ellipse
+                Canvas.Left="-160"
+                Canvas.Top="-220"
+                Width="760"
+                Height="620">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Offset="0" Color="#229CFF41" />
+                        <GradientStop Offset="1" Color="#009CFF41" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+        </Canvas>
+        <Grid IsHitTestVisible="False">
+            <Ellipse
+                Width="700"
+                Height="560"
+                Margin="0,0,-260,-300"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Offset="0" Color="#1463FFBA" />
+                        <GradientStop Offset="1" Color="#0063FFBA" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <Rectangle Opacity="0.025">
+                <Rectangle.Fill>
+                    <DrawingBrush
+                        TileMode="Tile"
+                        Viewbox="0,0,4,4"
+                        ViewboxUnits="Absolute"
+                        Viewport="0,0,4,4"
+                        ViewportUnits="Absolute">
+                        <DrawingBrush.Drawing>
+                            <GeometryDrawing Brush="White">
+                                <GeometryDrawing.Geometry>
+                                    <RectangleGeometry Rect="0,0,4,1" />
+                                </GeometryDrawing.Geometry>
+                            </GeometryDrawing>
+                        </DrawingBrush.Drawing>
+                    </DrawingBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+        </Grid>
+
+        <Grid Margin="28,18,28,22">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!--  Top bar  -->
+            <Border
+                Padding="0,0,0,16"
+                BorderBrush="#0AFFFFFF"
+                BorderThickness="0,0,0,1">
+                <DockPanel LastChildFill="False">
+                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                        <Border
+                            Width="42"
+                            Height="42"
+                            Background="{StaticResource PsBrandGradient}"
+                            CornerRadius="13">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="25" Opacity="0.35" ShadowDepth="0" Color="#AAFF4D" />
+                            </Border.Effect>
+                            <Image
+                                Margin="4"
+                                RenderOptions.BitmapScalingMode="HighQuality"
+                                Source="/Resources/prosys-logo.png" />
+                        </Border>
+                        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <TextBlock
+                                FlowDirection="LeftToRight"
+                                FontSize="19"
+                                FontWeight="Black"
+                                Text="ProSyS VPN" />
+                            <TextBlock
+                                FontSize="11"
+                                Foreground="{StaticResource PsMuted}"
+                                Text="{Binding VersionText}" />
+                        </StackPanel>
+                        <Border
+                            Margin="18,0,0,0"
+                            Padding="10,6"
+                            VerticalAlignment="Center"
+                            Background="#06FFFFFF"
+                            BorderBrush="#0EFFFFFF"
+                            BorderThickness="1"
+                            CornerRadius="30">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse
+                                    Width="7"
+                                    Height="7"
+                                    Fill="{StaticResource PsAcid}">
+                                    <Ellipse.Effect>
+                                        <DropShadowEffect BlurRadius="12" Opacity="0.9" ShadowDepth="0" Color="#B8FF4D" />
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                                <TextBlock
+                                    Margin="8,0,0,0"
+                                    FontSize="11"
+                                    Foreground="#96A199"
+                                    Text="سرویس رایگان" />
+                                <TextBlock
+                                    Margin="6,0,0,0"
+                                    FontSize="11"
+                                    FontWeight="Bold"
+                                    Foreground="{StaticResource PsAcid}"
+                                    Text="روزانه ۵۰۰ مگ" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button
+                            Command="{Binding OpenChannelCmd}"
+                            Content="کانال تلگرام"
+                            Style="{StaticResource PsQuietButton}" />
+                        <Button
+                            Margin="8,0,0,0"
+                            Command="{Binding ShowAdvancedCmd}"
+                            Style="{StaticResource PsQuietButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    Width="16"
+                                    Height="16"
+                                    VerticalAlignment="Center"
+                                    Kind="TuneVariant" />
+                                <TextBlock Margin="6,0,0,0" Text="حالت پیشرفته" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!--  Main area  -->
+            <Grid Grid.Row="1" Margin="0,20,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="380" />
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="340" />
+                </Grid.ColumnDefinitions>
+
+                <!--  Hero card with the portal orb  -->
+                <Border
+                    x:Name="hero"
+                    Background="{StaticResource PsHeroGradient}"
+                    BorderBrush="#12FFFFFF"
+                    BorderThickness="1"
+                    CornerRadius="28"
+                    Opacity="0">
+                    <Border.RenderTransform>
+                        <TranslateTransform x:Name="heroShift" />
+                    </Border.RenderTransform>
+                    <Grid>
+                        <Border Background="{StaticResource PsHeroGlow}" CornerRadius="28" />
+                        <Grid Margin="28">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!--  Portal  -->
+                            <Viewbox MaxWidth="360" MaxHeight="360" Stretch="Uniform">
+                                <Grid x:Name="portal" Width="340" Height="340">
+                                    <!--  pulse ring (connected)  -->
+                                    <Ellipse
+                                        x:Name="pulseRing"
+                                        Width="320"
+                                        Height="320"
+                                        Opacity="0"
+                                        RenderTransformOrigin="0.5,0.5"
+                                        Stroke="{StaticResource PsAcid}"
+                                        StrokeThickness="2">
+                                        <Ellipse.RenderTransform>
+                                            <ScaleTransform x:Name="pulseScale" />
+                                        </Ellipse.RenderTransform>
+                                        <Ellipse.Effect>
+                                            <BlurEffect Radius="6" />
+                                        </Ellipse.Effect>
+                                    </Ellipse>
+
+                                    <!--  outer thin ring  -->
+                                    <Ellipse
+                                        Width="300"
+                                        Height="300"
+                                        RenderTransformOrigin="0.5,0.5"
+                                        Stroke="#30C8FF76"
+                                        StrokeDashArray="60 6"
+                                        StrokeThickness="1">
+                                        <Ellipse.RenderTransform>
+                                            <RotateTransform x:Name="ringOuterRot" />
+                                        </Ellipse.RenderTransform>
+                                    </Ellipse>
+
+                                    <!--  orb  -->
+                                    <Ellipse
+                                        x:Name="orb"
+                                        Width="250"
+                                        Height="250"
+                                        Fill="{StaticResource PsOrbBrush}">
+                                        <Ellipse.Effect>
+                                            <DropShadowEffect
+                                                x:Name="orbGlow"
+                                                BlurRadius="55"
+                                                Opacity="0.35"
+                                                ShadowDepth="0"
+                                                Color="#83FF44" />
+                                        </Ellipse.Effect>
+                                    </Ellipse>
+
+                                    <!--  inner dashed ring  -->
+                                    <Ellipse
+                                        Width="190"
+                                        Height="190"
+                                        RenderTransformOrigin="0.5,0.5"
+                                        Stroke="#45C8FF76"
+                                        StrokeDashArray="3 5"
+                                        StrokeThickness="1">
+                                        <Ellipse.RenderTransform>
+                                            <RotateTransform x:Name="ringDashRot" />
+                                        </Ellipse.RenderTransform>
+                                    </Ellipse>
+
+                                    <!--  accent arc (site .mini-portal i)  -->
+                                    <Path
+                                        Width="258"
+                                        Height="258"
+                                        RenderTransformOrigin="0.5,0.5"
+                                        Stretch="None"
+                                        Stroke="{StaticResource PsAcid}"
+                                        StrokeEndLineCap="Round"
+                                        StrokeStartLineCap="Round"
+                                        StrokeThickness="2"
+                                        Data="M 20,129 A 109,109 0 0 1 129,20">
+                                        <Path.RenderTransform>
+                                            <RotateTransform x:Name="arcRot" Angle="25" />
+                                        </Path.RenderTransform>
+                                        <Path.Effect>
+                                            <DropShadowEffect BlurRadius="10" Opacity="0.9" ShadowDepth="0" Color="#B8FF4D" />
+                                        </Path.Effect>
+                                    </Path>
+
+                                    <!--  scanning arc (busy)  -->
+                                    <Path
+                                        x:Name="scanArc"
+                                        Width="278"
+                                        Height="278"
+                                        Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"
+                                        RenderTransformOrigin="0.5,0.5"
+                                        Stretch="None"
+                                        Stroke="{StaticResource PsMint}"
+                                        StrokeEndLineCap="Round"
+                                        StrokeStartLineCap="Round"
+                                        StrokeThickness="3"
+                                        Data="M 10,139 A 129,129 0 0 1 139,10">
+                                        <Path.RenderTransform>
+                                            <RotateTransform x:Name="scanRot" />
+                                        </Path.RenderTransform>
+                                    </Path>
+
+                                    <!--  core button  -->
+                                    <Button
+                                        Width="104"
+                                        Height="104"
+                                        Command="{Binding ToggleConnectCmd}"
+                                        Cursor="Hand"
+                                        ToolTip="{Binding ConnectButtonText}">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border
+                                                    x:Name="core"
+                                                    Background="{StaticResource PsCoreBrush}"
+                                                    CornerRadius="32"
+                                                    RenderTransformOrigin="0.5,0.5">
+                                                    <Border.RenderTransform>
+                                                        <ScaleTransform x:Name="coreScale" />
+                                                    </Border.RenderTransform>
+                                                    <Border.Effect>
+                                                        <DropShadowEffect BlurRadius="34" Opacity="0.6" ShadowDepth="0" Color="#A8FF55" />
+                                                    </Border.Effect>
+                                                    <materialDesign:PackIcon
+                                                        Width="46"
+                                                        Height="46"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Foreground="#102017"
+                                                        Kind="Power" />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="core" Property="RenderTransform">
+                                                            <Setter.Value>
+                                                                <ScaleTransform ScaleX="1.05" ScaleY="1.05" />
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Trigger>
+                                                    <Trigger Property="IsPressed" Value="True">
+                                                        <Setter TargetName="core" Property="RenderTransform">
+                                                            <Setter.Value>
+                                                                <ScaleTransform ScaleX="0.95" ScaleY="0.95" />
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+
+                                </Grid>
+                            </Viewbox>
+
+                            <!--  Status + actions  -->
+                            <StackPanel Grid.Row="1" HorizontalAlignment="Center">
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    FontSize="32"
+                                    FontWeight="Black"
+                                    Text="{Binding StatusTitle}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{StaticResource PsInk}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource PsAcid}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock
+                                    Margin="0,6,0,0"
+                                    HorizontalAlignment="Center"
+                                    FontSize="13"
+                                    Foreground="{StaticResource PsMuted}"
+                                    Text="{Binding StatusSubtitle}"
+                                    TextAlignment="Center"
+                                    TextWrapping="Wrap" />
+                                <StackPanel
+                                    Margin="0,18,0,0"
+                                    HorizontalAlignment="Center"
+                                    Orientation="Horizontal">
+                                    <Button
+                                        MinWidth="170"
+                                        Command="{Binding ToggleConnectCmd}"
+                                        Content="{Binding ConnectButtonText}"
+                                        Style="{StaticResource PsPrimaryButton}" />
+                                    <CheckBox
+                                        Margin="22,0,0,0"
+                                        VerticalAlignment="Center"
+                                        IsChecked="{Binding TunEnabled}"
+                                        Style="{StaticResource PsSwitch}"
+                                        ToolTip="همهٔ برنامه‌ها و بازی‌ها از VPN عبور می‌کنند. نیاز به اجرای برنامه با دسترسی Administrator دارد.">
+                                        <StackPanel>
+                                            <TextBlock FontSize="13" FontWeight="Bold" Text="حالت کامل (TUN)" />
+                                            <TextBlock
+                                                FontSize="11"
+                                                Foreground="{StaticResource PsMuted}"
+                                                Text="برای بازی‌ها و همهٔ برنامه‌ها" />
+                                        </StackPanel>
+                                    </CheckBox>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!--  Side column  -->
+                <ScrollViewer
+                    x:Name="side"
+                    Grid.Column="2"
+                    Opacity="0"
+                    VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer.RenderTransform>
+                        <TranslateTransform x:Name="sideShift" />
+                    </ScrollViewer.RenderTransform>
+                    <StackPanel>
+                        <!--  Daily quota  -->
+                        <Border Style="{StaticResource PsCard}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <TextBlock
+                                        FontSize="13"
+                                        Foreground="{StaticResource PsMuted}"
+                                        Text="سهمیهٔ رایگان امروز" />
+                                    <materialDesign:PackIcon
+                                        Width="18"
+                                        Height="18"
+                                        HorizontalAlignment="Right"
+                                        Foreground="{StaticResource PsAcid}"
+                                        Kind="LightningBolt" />
+                                </DockPanel>
+                                <TextBlock
+                                    Margin="0,10,0,0"
+                                    FontSize="34"
+                                    FontWeight="Black"
+                                    Text="{Binding RemainingText}" />
+                                <TextBlock
+                                    FontSize="12"
+                                    Foreground="{StaticResource PsMuted}"
+                                    Text="{Binding QuotaText}" />
+                                <ProgressBar
+                                    Margin="0,14,0,0"
+                                    FlowDirection="RightToLeft"
+                                    Style="{StaticResource PsQuotaBar}"
+                                    Value="{Binding RemainingPercent, Mode=OneWay}" />
+                                <TextBlock
+                                    Margin="0,10,0,0"
+                                    FontSize="11"
+                                    Foreground="{StaticResource PsMuted}"
+                                    Text="{Binding ResetText}"
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <!--  Exhausted / upsell  -->
+                        <Border Margin="0,14,0,0">
+                            <Border.Style>
+                                <Style BasedOn="{StaticResource PsCard}" TargetType="Border">
+                                    <Setter Property="Background">
+                                        <Setter.Value>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Offset="0" Color="#122218" />
+                                                <GradientStop Offset="1" Color="#090D0A" />
+                                            </LinearGradientBrush>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Setter Property="BorderBrush" Value="#30B8FF4D" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsExhausted}" Value="True">
+                                            <Setter Property="BorderBrush" Value="#AAFF716B" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel>
+                                <TextBlock FontSize="16" FontWeight="Bold">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="سرویس نامحدود و پرسرعت" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsExhausted}" Value="True">
+                                                    <Setter Property="Text" Value="حجم رایگان امروز تمام شد" />
+                                                    <Setter Property="Foreground" Value="{StaticResource PsDanger}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock
+                                    Margin="0,6,0,14"
+                                    FontSize="12"
+                                    Foreground="{StaticResource PsMuted}"
+                                    Text="اشتراک ویژه را از سایت یا ربات تلگرام ProSyS تهیه کنید و کانفیگ را در حالت پیشرفته اضافه کنید."
+                                    TextWrapping="Wrap" />
+                                <UniformGrid Columns="2">
+                                    <Button
+                                        Margin="0,0,5,0"
+                                        Command="{Binding OpenSiteCmd}"
+                                        Content="خرید از سایت"
+                                        Padding="10,11"
+                                        Style="{StaticResource PsPrimaryButton}" />
+                                    <Button
+                                        Margin="5,0,0,0"
+                                        Command="{Binding OpenBotCmd}"
+                                        Content="ربات تلگرام"
+                                        Style="{StaticResource PsGhostButton}" />
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+
+                        <!--  Server  -->
+                        <Border Margin="0,14,0,0" Style="{StaticResource PsCard}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <TextBlock
+                                        FontSize="13"
+                                        Foreground="{StaticResource PsMuted}"
+                                        Text="سرور فعلی" />
+                                    <Border
+                                        Padding="9,2"
+                                        HorizontalAlignment="Right"
+                                        Background="#18B8FF4D"
+                                        CornerRadius="10">
+                                        <TextBlock
+                                            FontSize="11"
+                                            FontWeight="Bold"
+                                            Foreground="{StaticResource PsAcid}"
+                                            Text="{Binding ServerBadge}" />
+                                    </Border>
+                                </DockPanel>
+                                <TextBlock
+                                    Margin="0,8,0,0"
+                                    FontSize="15"
+                                    FontWeight="Bold"
+                                    Text="{Binding ServerName}"
+                                    TextTrimming="CharacterEllipsis" />
+                                <UniformGrid Margin="0,14,0,0" Columns="2">
+                                    <StackPanel>
+                                        <TextBlock FontSize="11" Foreground="{StaticResource PsMuted}" Text="دانلود" />
+                                        <TextBlock
+                                            FontSize="15"
+                                            FontWeight="Bold"
+                                            Foreground="{StaticResource PsMint}"
+                                            Text="{Binding DownSpeed}" />
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock FontSize="11" Foreground="{StaticResource PsMuted}" Text="آپلود" />
+                                        <TextBlock
+                                            FontSize="15"
+                                            FontWeight="Bold"
+                                            Foreground="{StaticResource PsAcid}"
+                                            Text="{Binding UpSpeed}" />
+                                    </StackPanel>
+                                </UniformGrid>
+                                <Button
+                                    Margin="0,14,0,0"
+                                    HorizontalAlignment="Stretch"
+                                    Command="{Binding UseFreeServerCmd}"
+                                    Content="استفاده از سرور رایگان"
+                                    Style="{StaticResource PsGhostButton}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <!--  Footer: errors / notice  -->
+            <Border
+                Grid.Row="2"
+                Margin="0,14,0,0"
+                Padding="14,10"
+                Background="#14FF716B"
+                BorderBrush="#55FF716B"
+                BorderThickness="1"
+                CornerRadius="14"
+                Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
+                <DockPanel>
+                    <Button
+                        Command="{Binding RetryCmd}"
+                        Content="تلاش دوباره"
+                        DockPanel.Dock="Right"
+                        Padding="12,6"
+                        Style="{StaticResource PsGhostButton}" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Foreground="#FFC9C6"
+                        Text="{Binding ErrorText}"
+                        TextWrapping="Wrap" />
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

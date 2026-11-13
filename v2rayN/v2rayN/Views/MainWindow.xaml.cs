@@ -3,6 +3,8 @@ using System.Windows.Media;
 using MaterialDesignThemes.Wpf;
 using v2rayN.Base;
 using v2rayN.Manager;
+using v2rayN.ProSyS;
+using v2rayN.ViewModels;
 
 namespace v2rayN.Views;
 
@@ -31,6 +33,13 @@ public partial class MainWindow
         menuBackupAndRestore.Click += MenuBackupAndRestore_Click;
 
         pbTheme.Content ??= new ThemeSettingView();
+
+        // ProSyS home screen (default) and classic v2rayN interface ("advanced mode").
+        var home = new ProSySHomeViewModel();
+        home.AdvancedRequested += () => ShowAdvanced(true);
+        homeView.DataContext = home;
+        btnProSySHome.Click += (_, _) => ShowAdvanced(false);
+        ShowAdvanced(_config.UiItem.ProSySAdvanced);
 
         this.WhenActivated(disposables =>
         {
@@ -78,7 +87,6 @@ public partial class MainWindow
             this.BindCommand(ViewModel, vm => vm.ReloadCmd, v => v.menuReload).DisposeWith(disposables);
             this.OneWayBind(ViewModel, vm => vm.BlReloadEnabled, v => v.menuReload.IsEnabled).DisposeWith(disposables);
 
-            this.OneWayBind(ViewModel, vm => vm.BlNewUpdate, v => v.btnNewUpdate.Visibility).DisposeWith(disposables);
 
             _layoutBindingsDisposable.DisposeWith(disposables);
 
@@ -143,7 +151,7 @@ public partial class MainWindow
              .DisposeWith(disposables);
         });
 
-        Title = $"{Utils.GetVersion()} - {(Utils.IsAdministrator() ? ResUI.RunAsAdmin : ResUI.NotRunAsAdmin)}";
+        Title = $"{ProSySBrand.ProductName} {Utils.GetVersionInfo()} - {(Utils.IsAdministrator() ? ResUI.RunAsAdmin : ResUI.NotRunAsAdmin)}";
         if (_config.UiItem.AutoHideStartup)
         {
             WindowState = WindowState.Minimized;
@@ -324,6 +332,13 @@ public partial class MainWindow
             ShowHideWindow(false);
         }
         RestoreUI();
+
+        // ProSyS: first run uses the Iran regional preset (Iranian sites go direct, Iran geo sources).
+        if (!_config.UiItem.ProSySPresetApplied && ViewModel != null)
+        {
+            _config.UiItem.ProSySPresetApplied = true;
+            _ = ViewModel.ApplyRegionalPreset(EPresetType.Iran);
+        }
     }
 
     private void RestoreUI()
@@ -429,8 +444,35 @@ public partial class MainWindow
         RestoreUI();
     }
 
+    private void ShowAdvanced(bool advanced)
+    {
+        homeView.Visibility = advanced ? Visibility.Collapsed : Visibility.Visible;
+        advancedPanel.Visibility = advanced ? Visibility.Visible : Visibility.Collapsed;
+        if (_config.UiItem.ProSySAdvanced != advanced)
+        {
+            _config.UiItem.ProSySAdvanced = advanced;
+            _ = ConfigHandler.SaveConfig(_config);
+        }
+    }
+
     private void AddHelpMenuItem()
     {
+        foreach (var (title, url) in new[]
+        {
+            ("سایت ProSyS", ProSySBrand.SiteUrl),
+            ("ربات تلگرام ProSyS", ProSySBrand.BotUrl),
+            ("کانال تلگرام ProSyS", ProSySBrand.ChannelUrl),
+            ("حریم خصوصی", ProSySBrand.PrivacyUrl),
+            ("سورس ProSyS VPN (GPL-3.0)", ProSySBrand.SourceUrl),
+            ("Based on v2rayN by 2dust", ProSySBrand.UpstreamUrl),
+        })
+        {
+            var link = new MenuItem { Tag = url, Header = title };
+            link.Click += MenuItem_Click;
+            menuHelp.Items.Add(link);
+        }
+        menuHelp.Items.Add(new Separator());
+
         var coreInfo = CoreInfoManager.Instance.GetCoreInfo();
         foreach (var it in coreInfo
             .Where(t => t.CoreType is not ECoreType.v2fly

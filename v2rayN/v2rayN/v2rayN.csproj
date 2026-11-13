@@ -11,12 +11,19 @@
 		<SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<CETCompat>false</CETCompat>
+		<AssemblyName>ProSySVPN</AssemblyName>
+		<RootNamespace>v2rayN</RootNamespace>
+		<Product>ProSyS VPN</Product>
+		<Version>1.0.0</Version>
+		<AssemblyTitle>ProSyS VPN for Windows</AssemblyTitle>
+		<Company>ProSyS</Company>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="MaterialDesignThemes" />
 		<PackageReference Include="H.NotifyIcon.Wpf" />
 		<PackageReference Include="ReactiveUI.WPF" />
+		<PackageReference Include="System.Security.Cryptography.ProtectedData" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -29,6 +36,9 @@
 		<Resource Include="Resources\NotifyIcon3.ico" />
 		<Resource Include="Resources\NotifyIcon4.ico" />
 		<Resource Include="Resources\v2rayN.ico" />
+		<Resource Include="Resources\prosys-logo.png" />
+		<Resource Include="Resources\Fonts\*.ttf" />
+		<None Include="Resources\Fonts\Vazirmatn-OFL.txt" CopyToOutputDirectory="PreserveNewest" Link="licenses\Vazirmatn-OFL.txt" />
 	</ItemGroup>
 
 	<ItemGroup>

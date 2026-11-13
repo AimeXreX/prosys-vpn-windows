@@ -473,6 +473,11 @@ public partial class ProfilesViewModel : MyReactiveObject
             NoticeManager.Instance.Enqueue(ResUI.PleaseSelectServer);
             return;
         }
+        if (Global.IsProSySManaged(item))
+        {
+            NoticeManager.Instance.Enqueue(Global.ProSySManagedLockedMsg);
+            return;
+        }
         var eConfigType = item.ConfigType;
 
         bool? ret = false;
@@ -548,6 +553,11 @@ public partial class ProfilesViewModel : MyReactiveObject
         var lstSelected = await GetProfileItems(false);
         if (lstSelected == null)
         {
+            return;
+        }
+        if (lstSelected.Any(Global.IsProSySManaged))
+        {
+            NoticeManager.Instance.Enqueue(Global.ProSySManagedLockedMsg);
             return;
         }
         if (await ConfigHandler.CopyServer(_config, lstSelected) == 0)
@@ -664,6 +674,11 @@ public partial class ProfilesViewModel : MyReactiveObject
         {
             return;
         }
+        if (lstSelected.Any(Global.IsProSySManaged))
+        {
+            NoticeManager.Instance.Enqueue(Global.ProSySManagedLockedMsg);
+            return;
+        }
 
         await ConfigHandler.MoveToGroup(_config, lstSelected, SelectedMoveToGroup.Id);
         NoticeManager.Instance.Enqueue(ResUI.OperationSuccess);
@@ -775,6 +790,11 @@ public partial class ProfilesViewModel : MyReactiveObject
             NoticeManager.Instance.Enqueue(ResUI.PleaseSelectServer);
             return;
         }
+        if (Global.IsProSySManaged(item))
+        {
+            NoticeManager.Instance.Enqueue(Global.ProSySManagedLockedMsg);
+            return;
+        }
 
         var (context, validatorResult) = await CoreConfigContextBuilder.Build(_config, item);
         if (NoticeManager.Instance.NotifyValidatorResult(validatorResult) && !validatorResult.Success)
@@ -804,6 +824,10 @@ public partial class ProfilesViewModel : MyReactiveObject
     public async Task Export2ClientConfigResult(string fileName, ProfileItem item)
     {
         if (fileName.IsNullOrEmpty())
+        {
+            return;
+        }
+        if (Global.IsProSySManaged(item))
         {
             return;
         }
@@ -861,6 +885,11 @@ public partial class ProfilesViewModel : MyReactiveObject
         var lstSelected = await GetProfileItems(true);
         if (lstSelected == null)
         {
+            return;
+        }
+        if (lstSelected.Any(Global.IsProSySManaged))
+        {
+            NoticeManager.Instance.Enqueue(Global.ProSySManagedLockedMsg);
             return;
         }
 

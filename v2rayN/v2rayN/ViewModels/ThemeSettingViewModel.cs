@@ -34,14 +34,6 @@ public partial class ThemeSettingViewModel : MyReactiveObject
     {
         ModifyTheme();
         ModifyFontSize();
-        if (!_config.UiItem.ColorPrimaryName.IsNullOrEmpty())
-        {
-            var swatch = new SwatchesProvider().Swatches.FirstOrDefault(t => t.Name == _config.UiItem.ColorPrimaryName);
-            if (swatch?.ExemplarHue?.Color is not null)
-            {
-                ChangePrimaryColor(swatch.ExemplarHue.Color);
-            }
-        }
     }
 
     private void BindingUI()
@@ -112,20 +104,65 @@ public partial class ThemeSettingViewModel : MyReactiveObject
             });
     }
 
+    /// <summary>ProSyS: the app always uses the dark neon palette of the website and Android app.</summary>
     public void ModifyTheme()
     {
-        var baseTheme = CurrentTheme switch
-        {
-            nameof(ETheme.Dark) => BaseTheme.Dark,
-            nameof(ETheme.Light) => BaseTheme.Light,
-            _ => BaseTheme.Inherit,
-        };
-
         var theme = _paletteHelper.GetTheme();
-        theme.SetBaseTheme(baseTheme);
+        theme.SetBaseTheme(BaseTheme.Dark);
+        var acid = System.Windows.Media.Color.FromRgb(0xB8, 0xFF, 0x4D);
+        var acidText = System.Windows.Media.Color.FromRgb(0x07, 0x11, 0x09);
+        var mint = System.Windows.Media.Color.FromRgb(0x63, 0xFF, 0xBA);
+        theme.PrimaryLight = new ColorPair(acid.Lighten(), acidText);
+        theme.PrimaryMid = new ColorPair(acid, acidText);
+        theme.PrimaryDark = new ColorPair(System.Windows.Media.Color.FromRgb(0x8C, 0xEE, 0x47), acidText);
+        theme.SecondaryLight = new ColorPair(mint.Lighten(), acidText);
+        theme.SecondaryMid = new ColorPair(mint, acidText);
+        theme.SecondaryDark = new ColorPair(mint.Darken(), acidText);
         _paletteHelper.SetTheme(theme);
 
-        WindowsUtils.SetDarkBorder(Application.Current.MainWindow, CurrentTheme);
+        ApplyProSySSurfaces();
+        WindowsUtils.SetDarkBorder(Application.Current.MainWindow, nameof(ETheme.Dark));
+    }
+
+    private static void ApplyProSySSurfaces()
+    {
+        static System.Windows.Media.SolidColorBrush B(uint argb)
+        {
+            var brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(
+                (byte)(argb >> 24), (byte)(argb >> 16), (byte)(argb >> 8), (byte)argb));
+            brush.Freeze();
+            return brush;
+        }
+        var res = Application.Current.Resources;
+        var bg = B(0xFF050706);
+        var surface = B(0xFF0B0F0C);
+        var surface2 = B(0xFF101712);
+        var ink = B(0xFFF2F6F3);
+        var line = B(0x1AFFFFFF);
+        foreach (var key in new[] { "MaterialDesign.Brush.Background", "MaterialDesignPaper", "MaterialDesignBackground" })
+        {
+            res[key] = bg;
+        }
+        foreach (var key in new[] { "MaterialDesign.Brush.Card.Background", "MaterialDesignCardBackground", "MaterialDesign.Brush.ComboBox.DropDown.Background" })
+        {
+            res[key] = surface2;
+        }
+        foreach (var key in new[] { "MaterialDesign.Brush.ToolBar.Background", "MaterialDesignToolBarBackground" })
+        {
+            res[key] = surface;
+        }
+        foreach (var key in new[] { "MaterialDesign.Brush.Foreground", "MaterialDesignBody" })
+        {
+            res[key] = ink;
+        }
+        foreach (var key in new[] { "MaterialDesign.Brush.Card.Border", "MaterialDesign.Brush.Separator.Background", "MaterialDesign.Brush.ListView.Separator", "MaterialDesign.Brush.DataGrid.Border", "MaterialDesign.Brush.ToolBar.Separator" })
+        {
+            res[key] = line;
+        }
+        res["MaterialDesign.Brush.ListView.Selected"] = B(0x26B8FF4D);
+        res["MaterialDesign.Brush.DataGrid.Selected"] = B(0x26B8FF4D);
+        res["MaterialDesign.Brush.ListView.Hover"] = B(0x12B8FF4D);
+        res["MaterialDesign.Brush.DataGrid.RowHoverBackground"] = B(0x12B8FF4D);
     }
 
     private void ModifyFontSize()

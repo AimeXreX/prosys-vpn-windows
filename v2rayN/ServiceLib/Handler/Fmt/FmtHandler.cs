@@ -6,6 +6,10 @@ public class FmtHandler
 
     public static string? GetShareUri(ProfileItem item)
     {
+        if (Global.IsProSySManaged(item))
+        {
+            return null;
+        }
         try
         {
             var url = item.ConfigType switch

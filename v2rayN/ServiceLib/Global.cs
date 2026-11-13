@@ -2,7 +2,13 @@ namespace ServiceLib;
 
 public class Global
 {
-    public const string AppName = "v2rayN";
+    public const string AppName = "ProSySVPN";
+
+    // ProSyS VPN: managed free service (0.5 GiB daily). Profiles in this group are locked.
+    public const string ProSySManagedSubId = "prosysfree";
+    public const string ProSySManagedLockedMsg = "این سرور، سرویس رایگان مدیریت‌شدهٔ ProSyS است و قابل ویرایش، کپی یا اشتراک‌گذاری نیست.";
+
+    public static bool IsProSySManaged(ProfileItem? item) => item?.Subid == ProSySManagedSubId;
     public const string GithubUrl = "https://github.com";
     public const string GithubApiUrl = "https://api.github.com/repos";
     public const string GeoUrl = "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/{0}.dat";

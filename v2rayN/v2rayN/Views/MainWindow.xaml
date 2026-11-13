@@ -10,10 +10,11 @@
     xmlns:resx="clr-namespace:ServiceLib.Resx;assembly=ServiceLib"
     xmlns:view="clr-namespace:v2rayN.Views"
     xmlns:vms="clr-namespace:ServiceLib.ViewModels;assembly=ServiceLib"
-    Title="v2rayN"
+    Title="ProSyS VPN"
     Width="1200"
     Height="800"
-    MinWidth="800"
+    MinWidth="980"
+    MinHeight="640"
     x:TypeArguments="vms:MainWindowViewModel"
     Icon="/Resources/v2rayN.ico"
     ResizeMode="CanResizeWithGrip"
@@ -37,7 +38,8 @@
         SnackbarMessageQueue="{Binding ElementName=MainSnackbar, Path=MessageQueue}"
         Style="{StaticResource MaterialDesignEmbeddedDialogHost}">
         <Grid>
-            <DockPanel>
+            <view:ProSySHomeView x:Name="homeView" />
+            <DockPanel x:Name="advancedPanel" Visibility="Collapsed">
                 <ToolBarTray DockPanel.Dock="Top">
                     <ToolBar
                         HorizontalAlignment="Center"
@@ -45,6 +47,20 @@
                         ClipToBounds="True"
                         KeyboardNavigation.TabNavigation="Continue"
                         Style="{StaticResource MaterialDesignToolBar}">
+                        <Button
+                            x:Name="btnProSySHome"
+                            Margin="{StaticResource MarginLeftRight8}"
+                            Style="{StaticResource PsGhostButton}"
+                            ToolTip="بازگشت به صفحهٔ اصلی ProSyS">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    Margin="{StaticResource MarginRight8}"
+                                    VerticalAlignment="Center"
+                                    Kind="HomeVariant" />
+                                <TextBlock FontFamily="{StaticResource PsFont}" Text="خانهٔ ProSyS" />
+                            </StackPanel>
+                        </Button>
+                        <Separator />
                         <Menu Margin="0,1" Style="{StaticResource ToolbarMenu}">
                             <MenuItem Padding="{StaticResource MarginLeftRight8}" AutomationProperties.Name="{x:Static resx:ResUI.menuServers}">
                                 <MenuItem.Header>
@@ -259,7 +275,7 @@
                                         <TextBlock Text="{x:Static resx:ResUI.menuHelp}" />
                                     </StackPanel>
                                 </MenuItem.Header>
-                                <MenuItem x:Name="menuCheckUpdate" Header="{x:Static resx:ResUI.menuCheckUpdate}" />
+                                <MenuItem x:Name="menuCheckUpdate" Header="{x:Static resx:ResUI.menuCheckUpdate}" Visibility="Collapsed" />
                                 <Separator Margin="-40,5" />
                             </MenuItem>
                         </Menu>
@@ -284,6 +300,7 @@
                         <Menu Margin="0,1" Style="{StaticResource ToolbarMenu}">
                             <MenuItem
                                 x:Name="menuPromotion"
+                                Visibility="Collapsed"
                                 Padding="{StaticResource MarginLeftRight8}"
                                 AutomationProperties.Name="{x:Static resx:ResUI.menuPromotion}">
                                 <MenuItem.Header>
@@ -453,9 +470,9 @@
                             </TabItem>
                         </TabControl>
                     </Grid>
-                    <materialDesign:Snackbar x:Name="MainSnackbar" MessageQueue="{materialDesign:MessageQueue}" />
                 </Grid>
             </DockPanel>
+            <materialDesign:Snackbar x:Name="MainSnackbar" MessageQueue="{materialDesign:MessageQueue}" />
         </Grid>
     </materialDesign:DialogHost>
 </base:WindowBase>

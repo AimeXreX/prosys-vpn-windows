@@ -269,6 +269,15 @@ public partial class MainWindowViewModel : MyReactiveObject
             .ObserveOn(RxSchedulers.MainThreadScheduler)
             .Subscribe(bl => BlNewUpdate = bl);
 
+        AppEvents.ProSySProfilesChanged
+            .AsObservable()
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
+            .SubscribeAsync(async _ =>
+            {
+                await RefreshServersDispatcherAsync();
+                await Reload();
+            });
+
         #endregion AppEvents
 
         ProfilesViewModel.RefreshServersRequested

@@ -122,7 +122,7 @@ public static class ConfigHandler
         {
             config.UiItem.CurrentLanguage = Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName.Equals("zh", StringComparison.CurrentCultureIgnoreCase)
                 ? Global.Languages.First()
-                : Global.Languages[2];
+                : "fa";
         }
 
         config.ConstItem ??= new ConstItem();

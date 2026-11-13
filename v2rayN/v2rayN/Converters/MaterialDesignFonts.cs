@@ -20,6 +20,6 @@ public class MaterialDesignFonts
         catch
         {
         }
-        MyFont ??= new FontFamily("Microsoft YaHei");
+        MyFont ??= new FontFamily(new Uri("pack://application:,,,/"), "./Resources/Fonts/#Vazirmatn, Segoe UI, Tahoma");
     }
 }
